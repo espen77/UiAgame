@@ -1,8 +1,8 @@
 # Karl i Grimstad
 
-A small Pygame life-simulation game inspired by *Johannes in the Fast Lane*. Karl starts with shorts, a little money, and a map of Grimstad. He must work, study, buy better clothes, and save for an apartment.
+A small Pygame life-simulation game inspired by *Johannes in the Fast Lane*. Karl starts with shorts, a little money, and a map of Grimstad. He must work, study, buy better clothes, and save for the Exclusive House.
 
-The game uses the map in `images/grimstad_map.png` and the character outfits in `images/character/`.
+The game uses the map in `images/grimstad_map.png`, the character outfits in `images/character/`, and the effects in `sounds/`.
 
 ## Requirements
 
@@ -21,17 +21,17 @@ py -m pip install -r requirements.txt
 py main.py
 ```
 
-The game opens in a resizable window. The complete Grimstad map always scales to fit the window, so it never scrolls away from view. Use WASD or the arrow keys to move.
+The game opens in a resizable window. The complete Grimstad map always scales into the left side, while Karl's portrait, needs, energy bar, and next-goal text stay in the right-side panel.
 
 ## Controls
 
 | Key | Action |
 | --- | --- |
 | `WASD` / arrows | Move around Grimstad |
-| `E` | Enter a nearby location |
+| Left click | Walk to a marked place and enter automatically |
+| `E` | Enter a nearby building, shop, hostel, or house |
 | `C` | Open the clothing shop |
 | `H` | Open housing and rest |
-| `E` | Enter the bar, clothing shop, houses, and other marked locations |
 | `1`–`9` / arrows / Enter | Choose menu actions |
 | `Esc` | Close a menu |
 | `F1` | Show help |
@@ -40,17 +40,17 @@ The game opens in a resizable window. The complete Grimstad map always scales to
 
 1. Start at Vidregående skole and take study weeks to unlock better jobs.
 2. Visit the harbor or Auto45 with the right outfit to work a shift.
-3. Visit the clothing shop between Vidregående and the harbor to buy outfits that qualify for higher-paying jobs.
-4. Buy food at Auto45 or a cheap meal at the bar, then use the housing menu to rest.
-5. Choose housing: the house by the freeway is cheap, while the house by the sea is expensive but restores more energy.
-6. Reach the final goal: university education, a consultant shift, a home, and 8,000 kr saved.
+3. Visit the clothing shop between Vidregående and the harbor. Clothing levels must be owned in order before the next level can be bought.
+4. Buy food at Auto45 or a cheap meal at Apotekergården, then rest at the hostel or a home.
+5. Choose housing: the house by the freeway is cheap, while Exclusive House costs more but restores full energy.
+6. Reach the final goal: university education, a consultant shift, Exclusive House ownership, and 8,000 kr saved.
 
 ## Locations and housing
 
 - The university is in the west, the church in the east, Auto45 by the northern freeway, the harbor in the south, and Vidregående in the center.
-- The bar and clothing shop sit between Vidregående and the harbor.
+- Apotekergården and the clothing shop sit between Vidregående and the harbor. The hostel sits between Vidregående and the university.
 - `Motorveishuset` costs 3,500 kr, has 90 kr daily rent, and restores 88 energy when resting.
-- `Huset ved havet` costs 12,000 kr, has 260 kr daily rent, and restores full energy when resting.
+- `Exclusive House` is south of the church in the bottom-right part of the map. It costs 12,000 kr, has 260 kr daily rent, restores full energy, and is required to win.
 
 ## Jobs
 
@@ -63,6 +63,10 @@ The game opens in a resizable window. The complete Grimstad map always scales to
 | IT-support | Gamer-hoodie | Universitetet | Videregående | 400 kr |
 | Menighetsarbeider | Dress | Kirken | Videregående | 360 kr |
 | Universitetskonsulent | Dress | Universitetet | Universitet | 600 kr |
+
+## Sounds
+
+The `sounds/` directory contains effects for walking, sleeping, working, opening doors, and eating or drinking. The bundled WAV files are synthesized placeholders and can be replaced without changing code.
 
 ## Development
 

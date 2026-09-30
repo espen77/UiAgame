@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pygame
 
 from .content import (
-    BAR_FOOD_PRICE,
+    PHARMACY_FOOD_PRICE,
     FOOD_PRICE,
     GOAL_SAVINGS,
     HOUSING,
@@ -81,13 +81,22 @@ class GameUI:
                     hint="Mat holder Karl i gang mens han jobber.",
                 )
             )
-        elif location_id == "bar":
+        elif location_id == "pharmacy":
             actions.append(
                 ModalAction(
-                    id="buy_bar_food",
-                    label=f"Kjøp måltid (+30 mat, +10 energi, -{BAR_FOOD_PRICE} kr)",
-                    enabled=state.money >= BAR_FOOD_PRICE,
+                    id="buy_pharmacy_food",
+                    label=f"Kjøp måltid (+30 mat, +10 energi, -{PHARMACY_FOOD_PRICE} kr)",
+                    enabled=state.money >= PHARMACY_FOOD_PRICE,
                     hint="Billig mat og litt ekstra energi til kvelden.",
+                )
+            )
+        elif location_id == "hostel":
+            actions.append(
+                ModalAction(
+                    id="sleep_hostel",
+                    label=f"Hvil på hospits (-{HOSTEL_PRICE} kr)",
+                    enabled=state.money >= HOSTEL_PRICE,
+                    hint="Billig overnatting med mindre energi enn egen bolig.",
                 )
             )
         elif location_id == "clothing_shop":
@@ -191,12 +200,17 @@ class GameUI:
                     )
                 )
             else:
+                required = state.required_outfit(outfit_id)
                 actions.append(
                     ModalAction(
                         id=f"outfit:{outfit_id}",
                         label=f"Kjøp {outfit.name} (-{outfit.price} kr)",
-                        enabled=state.money >= outfit.price,
-                        hint=f"{outfit.description} Jobber: {job_names}.",
+                        enabled=required is None and state.money >= outfit.price,
+                        hint=(
+                            f"Kjøp {required} først."
+                            if required
+                            else f"{outfit.description} Jobber: {job_names}."
+                        ),
                     )
                 )
         actions.append(ModalAction(id="close", label="Lukk (Esc)"))
@@ -245,7 +259,7 @@ class GameUI:
         return Modal(
             context="housing",
             title="Bolig i Grimstad",
-            subtitle="Billig ved motorveien eller dyrt ved havet.",
+            subtitle="Billig ved motorveien eller Exclusive House sør for kirken.",
             lines=[
                 f"Penger: {state.money} kr",
                 f"Nåværende bolig: {state.home_label}",
@@ -266,8 +280,8 @@ class GameUI:
                 "H: bolig og hvile",
                 "1-9: velg en handling i en meny",
                 "Esc: lukk meny",
-                "Mål: universitetsutdanning, egen bolig, konsulentjobb og minst 8000 kr.",
-                "Hus: billig ved motorveien, dyrt og luksuriøst ved havet.",
+                "Mål: universitetsutdanning, Exclusive House, konsulentjobb og minst 8000 kr.",
+                "Klikk på et kartsted for at Karl skal gå dit og gå inn.",
             ],
             actions=[ModalAction(id="close", label="Spill (Esc)", hint="Lukk hjelpevinduet.")],
         )
@@ -278,7 +292,7 @@ class GameUI:
             title="Karl vant karrieren!",
             subtitle="Fra shortser på kaia til universitetskonsulent.",
             lines=[
-                f"Full utdanning, egen bolig, konsulentjobb og {GOAL_SAVINGS} kr spare.",
+                f"Full utdanning, Exclusive House, konsulentjobb og {GOAL_SAVINGS} kr spare.",
                 "Du kan fortsette spille og bygge opp sparepengene.",
             ],
             actions=[ModalAction(id="close", label="Feir! (Esc)", hint="Karl er både rik og kjent i Grimstad.")],
@@ -286,8 +300,8 @@ class GameUI:
 
     def layout_modal(self, modal: Modal, viewport: tuple[int, int]) -> tuple[pygame.Rect, list[ButtonRect]]:
         width = min(780, viewport[0] - 40)
-        button_height = 62
-        button_gap = 8
+        button_height = 54
+        button_gap = 6
         wrapped_lines = sum(len(self.wrap_text(line, self.body_font, width - 68)) for line in modal.lines)
         content_height = 112 + wrapped_lines * 25 + len(modal.actions) * (button_height + button_gap) + 24
         height = min(viewport[1] - 36, max(320, content_height))
@@ -313,12 +327,141 @@ class GameUI:
                 return button.action
         return None
 
-    def draw_hud(self, surface: pygame.Surface, state: GameState) -> None:
-        self._draw_status_card(surface, state)
-        self._draw_portrait(surface, state)
-        self._draw_needs(surface, state)
-        self._draw_objective(surface, state)
-        self._draw_controls(surface)
+    def draw_hud(
+        self,
+        surface: pygame.Surface,
+        state: GameState,
+        map_viewport: pygame.Rect | None = None,
+    ) -> None:
+        map_viewport = map_viewport or surface.get_rect()
+        panel = pygame.Rect(
+            map_viewport.right,
+            0,
+            surface.get_width() - map_viewport.right,
+            surface.get_height(),
+        )
+        self._draw_hud_panel(surface, state, panel)
+
+    def _draw_hud_panel(self, surface: pygame.Surface, state: GameState, panel: pygame.Rect) -> None:
+        pygame.draw.rect(surface, (16, 22, 30), panel)
+        pygame.draw.line(surface, (70, 84, 96), panel.topleft, panel.bottomleft, 3)
+        inner = panel.inflate(-32, -24)
+        portrait_width = min(150, inner.width - 20)
+        portrait_rect = pygame.Rect(0, 0, portrait_width, 180)
+        portrait_rect.midtop = (panel.centerx, panel.y + 14)
+        pygame.draw.rect(surface, (24, 32, 42), portrait_rect.inflate(10, 10), border_radius=12)
+        portrait = self.characters.get(state.current_outfit)
+        if portrait:
+            surface.blit(portrait, portrait.get_rect(midtop=(portrait_rect.centerx, portrait_rect.y + 4)))
+        self._text(
+            surface,
+            OUTFITS[state.current_outfit].name,
+            self.small_font,
+            (panel.centerx, portrait_rect.bottom + 4),
+            (255, 255, 255),
+            center=True,
+        )
+
+        y = portrait_rect.bottom + 32
+        self._text(surface, f"{state.money} kr", self.money_font, (inner.x, y), (255, 214, 84))
+        y += 32
+        job = self._current_job(state)
+        y = self._draw_wrapped(
+            surface,
+            f"Jobb: {job.name if job else 'Søk om jobb'}",
+            self.body_font,
+            inner.x,
+            y,
+            inner.width,
+            (225, 232, 238),
+        )
+        y = self._draw_wrapped(
+            surface,
+            f"Utdanning: {state.education_label}  •  Dag: {state.day}",
+            self.small_font,
+            inner.x,
+            y,
+            inner.width,
+            (196, 208, 218),
+        )
+        y = self._draw_wrapped(
+            surface,
+            f"Bolig: {state.home_label}  •  Leie: {state.daily_housing_cost} kr",
+            self.small_font,
+            inner.x,
+            y,
+            inner.width,
+            (196, 208, 218),
+        )
+
+        y += 14
+        bar_width = inner.width - 68
+        self._bar(surface, pygame.Rect(inner.x + 68, y + 8, bar_width, 15), state.hunger, (236, 96, 84), "Mat")
+        self._bar(surface, pygame.Rect(inner.x + 68, y + 46, bar_width, 15), state.energy, (72, 176, 230), "Energi")
+        y += 82
+
+        pygame.draw.rect(surface, (24, 32, 42), (inner.x, y, inner.width, 92), border_radius=10)
+        self._text(surface, "NESTE MÅL", self.small_font, (inner.x + 12, y + 9), (255, 214, 84))
+        self._draw_wrapped(
+            surface,
+            self._next_goal_text(state),
+            self.small_font,
+            inner.x + 12,
+            y + 30,
+            inner.width - 24,
+            (225, 232, 238),
+            18,
+        )
+
+        self._draw_wrapped(
+            surface,
+            "WASD gå  •  E gå inn  •  C klær",
+            self.tiny_font,
+            inner.x,
+            panel.bottom - 54,
+            inner.width,
+            (205, 216, 224),
+            18,
+        )
+        self._draw_wrapped(
+            surface,
+            "Klikk sted = gå dit  •  H bolig  •  F1 hjelp",
+            self.tiny_font,
+            inner.x,
+            panel.bottom - 32,
+            inner.width,
+            (205, 216, 224),
+            18,
+        )
+
+    def _next_goal_text(self, state: GameState) -> str:
+        if state.destination in LOCATIONS:
+            return f"Går til {LOCATIONS[state.destination].name} …"
+        if state.won:
+            return "Målet er fullført! Karl er en suksess i Grimstad."
+        if state.education_level < 3:
+            return f"Studer mer: {state.education_progress}/9 studieuker."
+        if state.home_id != "exclusive_house":
+            return "Kjøp Exclusive House sør for kirken."
+        if "consultant" not in state.completed_jobs:
+            return "Jobb ett skift som universitetskonsulent."
+        return f"Spar videre til minst {GOAL_SAVINGS} kr."
+
+    def _draw_wrapped(
+        self,
+        surface: pygame.Surface,
+        text: str,
+        font: pygame.font.Font,
+        x: int,
+        y: int,
+        max_width: int,
+        color,
+        line_height: int = 20,
+    ) -> int:
+        for line in self.wrap_text(text, font, max_width):
+            self._text(surface, line, font, (x, y), color)
+            y += line_height
+        return y
 
     def draw_shift(self, surface: pygame.Surface, state: GameState) -> None:
         if state.shift is None:
@@ -367,13 +510,13 @@ class GameUI:
             pygame.draw.rect(surface, background, button.rect, border_radius=10)
             prefix = f"{button.index + 1}. " if enabled else ""
             label = self.body_bold.render(f"{prefix}{button.action.label}", True, (255, 255, 255) if enabled else (104, 112, 120))
-            surface.blit(label, label.get_rect(midtop=(button.rect.centerx, button.rect.y + 7)))
+            surface.blit(label, label.get_rect(midtop=(button.rect.centerx, button.rect.y + 5)))
             if button.action.hint:
                 hint_color = (226, 240, 234) if enabled else (124, 132, 140)
                 hint = self.wrap_text(button.action.hint, self.tiny_font, button.rect.width - 24)
                 if hint:
                     hint_surface = self.tiny_font.render(hint[0], True, hint_color)
-                    surface.blit(hint_surface, hint_surface.get_rect(midbottom=(button.rect.centerx, button.rect.bottom - 5)))
+                    surface.blit(hint_surface, hint_surface.get_rect(midbottom=(button.rect.centerx, button.rect.bottom - 4)))
 
     def draw_toast(self, surface: pygame.Surface, message: str, remaining_ms: int) -> None:
         text = self.body_bold.render(message, True, (255, 255, 255))
@@ -385,9 +528,15 @@ class GameUI:
         surface.blit(panel_surface, panel.topleft)
         surface.blit(text, rect)
 
-    def draw_interaction_prompt(self, surface: pygame.Surface, message: str) -> None:
-        rect = pygame.Rect(0, 0, 330, 46)
-        rect.center = (surface.get_width() // 2, 112)
+    def draw_interaction_prompt(
+        self,
+        surface: pygame.Surface,
+        message: str,
+        map_viewport: pygame.Rect | None = None,
+    ) -> None:
+        map_viewport = map_viewport or surface.get_rect()
+        rect = pygame.Rect(0, 0, min(430, map_viewport.width - 30), 46)
+        rect.center = (map_viewport.centerx, map_viewport.y + 62)
         self._panel(surface, rect)
         self._text(
             surface,
@@ -409,75 +558,6 @@ class GameUI:
         pygame.draw.rect(surface, (28, 36, 46), shadow, border_radius=16)
         surface.blit(scaled, rect)
 
-    def _draw_status_card(self, surface: pygame.Surface, state: GameState) -> None:
-        rect = pygame.Rect(18, 18, 320, 168)
-        self._panel(surface, rect)
-        self._text(surface, "KARL I GRIMSTAD", self.heading_font, (rect.x + 18, rect.y + 12), (245, 247, 250))
-        self._text(surface, f"{state.money} kr", self.money_font, (rect.x + 18, rect.y + 45), (255, 214, 84))
-        job = self._current_job(state)
-        job_text = job.name if job else "Søk om jobb"
-        self._text(surface, f"Jobb: {job_text}", self.body_font, (rect.x + 18, rect.y + 80), (225, 232, 238))
-        self._text(
-            surface,
-            f"Utdanning: {state.education_label}   Dag: {state.day}",
-            self.body_font,
-            (rect.x + 18, rect.y + 107),
-            (225, 232, 238),
-        )
-        self._text(
-            surface,
-            f"Bolig: {state.home_label}",
-            self.body_font,
-            (rect.x + 18, rect.y + 134),
-            (225, 232, 238),
-        )
-
-    def _draw_portrait(self, surface: pygame.Surface, state: GameState) -> None:
-        rect = pygame.Rect(surface.get_width() - 146, 18, 128, 178)
-        self._panel(surface, rect)
-        portrait = self.characters.get(state.current_outfit)
-        if portrait:
-            surface.blit(portrait, portrait.get_rect(midtop=(rect.centerx, rect.y + 8)))
-        self._text(
-            surface,
-            OUTFITS[state.current_outfit].name,
-            self.small_font,
-            (rect.centerx, rect.bottom - 26),
-            (255, 255, 255),
-            center=True,
-        )
-
-    def _draw_needs(self, surface: pygame.Surface, state: GameState) -> None:
-        rect = pygame.Rect(18, surface.get_height() - 98, 300, 80)
-        self._panel(surface, rect)
-        self._bar(surface, pygame.Rect(rect.x + 16, rect.y + 20, rect.width - 32, 14), state.hunger, (236, 96, 84), "Mat")
-        self._bar(surface, pygame.Rect(rect.x + 16, rect.y + 51, rect.width - 32, 14), state.energy, (72, 176, 230), "Energi")
-
-    def _draw_objective(self, surface: pygame.Surface, state: GameState) -> None:
-        rect = pygame.Rect(surface.get_width() // 2 - 210, 18, 420, 66)
-        self._panel(surface, rect)
-        goal = "MÅL: BLI KARRIERESUCCESS" if not state.won else "MÅL FULLFØRT!"
-        self._text(surface, goal, self.body_bold, (rect.centerx, rect.y + 12), (255, 214, 84), center=True)
-        self._text(
-            surface,
-            f"universitet  •  bolig  •  konsulent  •  {GOAL_SAVINGS} kr",
-            self.small_font,
-            (rect.centerx, rect.y + 40),
-            (225, 232, 238),
-            center=True,
-        )
-
-    def _draw_controls(self, surface: pygame.Surface) -> None:
-        self._text(
-            surface,
-            "[E] Gå inn   [C] Klær   [H] Bolig   [F1] Hjelp",
-            self.small_font,
-            (surface.get_width() // 2, surface.get_height() - 28),
-            (255, 255, 255),
-            center=True,
-            shadow=(10, 12, 16),
-        )
-
     def _current_job(self, state: GameState):
         candidates = [
             job
@@ -496,7 +576,8 @@ class GameUI:
         color: tuple[int, int, int],
         label: str,
     ) -> None:
-        self._text(surface, label, self.small_font, (rect.x, rect.y - 6), (230, 236, 240))
+        label_surface = self.small_font.render(label, True, (230, 236, 240))
+        surface.blit(label_surface, label_surface.get_rect(midright=(rect.x - 10, rect.centery)))
         pygame.draw.rect(surface, (62, 72, 82), rect, border_radius=7)
         fill = rect.inflate(-4, -4)
         fill.width = max(0, int(fill.width * max(0.0, min(1.0, value / 100))))

@@ -11,6 +11,7 @@ class Outfit:
     color: tuple[int, int, int]
     image: str
     description: str
+    tier: int = 0
     purchasable: bool = True
 
 
@@ -22,6 +23,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(86, 150, 214),
         image="shorts.png",
         description="Sommerklær som passer til jobb ved kaia.",
+        tier=0,
     ),
     "casual": Outfit(
         id="casual",
@@ -30,6 +32,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(58, 62, 78),
         image="casual.png",
         description="Mørk polo og jeans. En fornuftig start i butikk.",
+        tier=1,
     ),
     "hoodie": Outfit(
         id="hoodie",
@@ -38,6 +41,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(44, 46, 58),
         image="hoodie.png",
         description="Mykt og praktisk for lagerarbeid på havnen.",
+        tier=2,
     ),
     "boilersuit": Outfit(
         id="boilersuit",
@@ -46,6 +50,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(236, 186, 36),
         image="boilersuit.png",
         description="Synlig refleks og verktøy. Perfekt for bilmekanikk.",
+        tier=3,
     ),
     "looser": Outfit(
         id="looser",
@@ -54,6 +59,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(70, 72, 88),
         image="looser.png",
         description="Avslappet IT-drakt som passer på universitetet.",
+        tier=4,
     ),
     "suit": Outfit(
         id="suit",
@@ -62,6 +68,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(24, 30, 52),
         image="suit.png",
         description="Profesjonell dress for menighetsarbeid og rådgivning.",
+        tier=5,
     ),
     "school": Outfit(
         id="school",
@@ -70,6 +77,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(32, 56, 104),
         image="school.png",
         description="Blir utdelt når Karl begynner på Vidregående.",
+        tier=-1,
         purchasable=False,
     ),
     "winner": Outfit(
@@ -79,6 +87,7 @@ OUTFITS: dict[str, Outfit] = {
         color=(214, 164, 42),
         image="winner.png",
         description="Karl sin seiersdrakt etter en fullstendig karriere.",
+        tier=99,
         purchasable=False,
     ),
 }
@@ -230,14 +239,14 @@ LOCATIONS: dict[str, Location] = {
         color=(36, 150, 178),
         description="Havneassistent og lagerarbeid nær vannet.",
     ),
-    "sea_house": Location(
-        id="sea_house",
-        name="Dyrt hus ved havet",
-        short_name="Huset ved havet",
-        x=0.27,
-        y=0.70,
+    "exclusive_house": Location(
+        id="exclusive_house",
+        name="Exclusive House",
+        short_name="Exclusive House",
+        x=0.78,
+        y=0.79,
         color=(52, 178, 196),
-        description="Eksklusiv bolig med utsikt, høy leie og beste rest.",
+        description="Eksklusiv bolig sør for kirken med utsikt, høy leie og beste rest.",
     ),
     "school": Location(
         id="school",
@@ -248,14 +257,23 @@ LOCATIONS: dict[str, Location] = {
         color=(52, 158, 96),
         description="Studier for å låse opp bedre jobber.",
     ),
-    "bar": Location(
-        id="bar",
-        name="Baren mellom skolen og havnen",
-        short_name="Baren",
+    "pharmacy": Location(
+        id="pharmacy",
+        name="Apotekergården mellom skolen og havnen",
+        short_name="Apotekergården",
         x=0.35,
         y=0.60,
         color=(186, 78, 120),
-        description="Billig mat og litt ekstra energi til kvelden.",
+        description="Billig mat, litt ekstra energi og et lite pause-sted.",
+    ),
+    "hostel": Location(
+        id="hostel",
+        name="Hospitset mellom skolen og universitetet",
+        short_name="Hospitset",
+        x=0.31,
+        y=0.36,
+        color=(112, 116, 130),
+        description="Billig overnatting for Karl når han ikke har egen bolig.",
     ),
     "clothing_shop": Location(
         id="clothing_shop",
@@ -290,14 +308,14 @@ HOUSING: dict[str, Housing] = {
         location="freeway_house",
         description="Billig bolig nær motorveien. Praktisk, men ikke luksus.",
     ),
-    "sea_house": Housing(
-        id="sea_house",
-        name="Dyrt hus ved havet",
+    "exclusive_house": Housing(
+        id="exclusive_house",
+        name="Exclusive House",
         price=12000,
         rent=260,
         recovery=100,
-        location="sea_house",
-        description="Utsikt over havet, full rest og høy daglig leie.",
+        location="exclusive_house",
+        description="Utsikt sør for kirken, full rest og høy daglig leie.",
     ),
 }
 
@@ -311,7 +329,7 @@ EDUCATION_NAMES = {
 EDUCATION_POINTS_PER_LEVEL = 3
 MAX_EDUCATION_POINTS = 9
 DAY_SECONDS = 180.0
-BAR_FOOD_PRICE = 40
+PHARMACY_FOOD_PRICE = 40
 FOOD_PRICE = 55
 HOSTEL_PRICE = 80
 NO_APARTMENT_COST = 35

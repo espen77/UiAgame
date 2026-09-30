@@ -57,10 +57,9 @@ class World:
         state.facing = direction
         return True
 
-    def _fit_map_to_viewport(self, viewport: tuple[int, int]) -> None:
+    def _fit_map_to_viewport(self, viewport: pygame.Rect) -> None:
         map_width, map_height = self.size
-        viewport_width, viewport_height = viewport
-        scale = min(viewport_width / map_width, viewport_height / map_height)
+        scale = min(viewport.width / map_width, viewport.height / map_height)
         target_size = (
             max(1, round(map_width * scale)),
             max(1, round(map_height * scale)),
@@ -69,10 +68,36 @@ class World:
             self.scaled_map = pygame.transform.smoothscale(self.map, target_size)
             self.scaled_size = target_size
         self.map_rect = pygame.Rect((0, 0), target_size)
-        self.map_rect.center = (viewport_width // 2, viewport_height // 2)
+        self.map_rect.center = viewport.center
 
-    def draw(self, surface: pygame.Surface, state: GameState, now_ms: int) -> str | None:
-        self._fit_map_to_viewport(surface.get_size())
+    def location_at_screen(self, position: tuple[int, int]) -> str | None:
+        point = pygame.Vector2(position)
+        for location_id in LOCATIONS:
+            marker_position = self.map_to_screen(self.location_position(location_id))
+            if point.distance_to(marker_position) <= 42:
+                return location_id
+        return None
+
+    def move_toward(self, state: GameState, destination: str, dt: float) -> tuple[bool, bool]:
+        target = self.location_position(destination)
+        to_target = target - state.position
+        distance = to_target.length()
+        if distance <= self.interaction_radius * 0.55:
+            return False, True
+        direction = to_target.normalize()
+        state.position += direction * min(distance, self.player_speed * dt)
+        state.facing = direction
+        return True, False
+
+    def draw(
+        self,
+        surface: pygame.Surface,
+        state: GameState,
+        now_ms: int,
+        viewport: pygame.Rect | None = None,
+    ) -> str | None:
+        viewport = viewport or surface.get_rect()
+        self._fit_map_to_viewport(viewport)
         surface.fill((20, 34, 43))
         surface.blit(self.scaled_map, self.map_rect)
         pygame.draw.rect(surface, (10, 22, 30), self.map_rect, 3)
@@ -102,6 +127,12 @@ class World:
             background = label_rect.inflate(14, 8)
             pygame.draw.rect(surface, (250, 250, 250), background, border_radius=6)
             surface.blit(label, label_rect)
+
+        if state.destination in LOCATIONS:
+            start = self.map_to_screen(state.position)
+            end = self.map_to_screen(self.location_position(state.destination))
+            pygame.draw.line(surface, (255, 214, 84), start, end, 3)
+            pygame.draw.circle(surface, (255, 214, 84), end, 28, 4)
 
         self._draw_player(surface, state)
         return nearby

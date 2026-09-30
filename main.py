@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pygame
 
-from game.assets import load_characters, load_map
+from game.assets import SoundBank, load_characters, load_map
 from game.content import LOCATIONS
 from game.state import GameState
 from game.ui import GameUI, Modal, ModalAction
@@ -19,6 +19,9 @@ class Game:
         self.state = GameState()
         self.world = World(load_map())
         self.ui = GameUI(load_characters())
+        self.sounds = SoundBank()
+        self.walk_sound_timer = 0.0
+        self.work_sound_timer = 0.0
         self.running = True
         self.modal: Modal | None = None
         self.modal_context: str | None = None
@@ -34,6 +37,10 @@ class Game:
             self.draw()
         pygame.quit()
 
+    def map_viewport(self) -> pygame.Rect:
+        width = max(640, round(self.screen.get_width() * 0.68))
+        return pygame.Rect(0, 0, width, self.screen.get_height())
+
     def handle_events(self) -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -44,10 +51,18 @@ class Game:
                 self.screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
             elif event.type == pygame.KEYDOWN:
                 self.handle_keydown(event)
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.modal:
-                action = self.ui.action_at(self.modal, event.pos, self.screen.get_size())
-                if action:
-                    self.activate(action)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.modal:
+                    action = self.ui.action_at(self.modal, event.pos, self.screen.get_size())
+                    if action:
+                        self.activate(action)
+                elif self.map_viewport().collidepoint(event.pos):
+                    location_id = self.world.location_at_screen(event.pos)
+                    if location_id:
+                        self.state.destination = location_id
+                        self.toast(f"Går til {LOCATIONS[location_id].name} …")
+                    else:
+                        self.toast("Klikk på et merket sted for å gå dit.")
 
     def handle_keydown(self, event: pygame.event.Event) -> None:
         if self.modal:
@@ -65,6 +80,18 @@ class Game:
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 self.activate_selected()
             return
+
+        if event.key in (
+            pygame.K_w,
+            pygame.K_a,
+            pygame.K_s,
+            pygame.K_d,
+            pygame.K_UP,
+            pygame.K_LEFT,
+            pygame.K_DOWN,
+            pygame.K_RIGHT,
+        ):
+            self.state.destination = None
 
         if event.key == pygame.K_e:
             self.open_nearby_location()
@@ -96,10 +123,12 @@ class Game:
 
     def open_nearby_location(self) -> None:
         location_id = self.world.nearest_location(self.state.position)
+        self.state.destination = None
         if location_id:
+            self.sounds.play("door_open")
             self.open_modal(f"location:{location_id}")
         else:
-            self.toast("Gå nærmere en bygning, butikk, bar eller bolig for å gå inn.")
+            self.toast("Gå nærmere en bygning, butikk, apotekergård eller bolig.")
 
     def open_modal(self, context: str) -> None:
         self.modal_context = context
@@ -138,6 +167,8 @@ class Game:
             started, message = self.state.start_shift(action.id.split(":", 1)[1])
             self.toast(message)
             if started:
+                self.sounds.play("work")
+                self.work_sound_timer = 0.9
                 self.close_modal()
             return
         if action.id.startswith("outfit:"):
@@ -147,10 +178,14 @@ class Game:
             self.open_modal("clothing")
             return
         elif action.id == "buy_food":
-            _, message = self.state.buy_food()
+            success, message = self.state.buy_food()
+            if success:
+                self.sounds.play("eat_drink")
             self.toast(message)
-        elif action.id == "buy_bar_food":
-            _, message = self.state.buy_bar_food()
+        elif action.id == "buy_pharmacy_food":
+            success, message = self.state.buy_pharmacy_food()
+            if success:
+                self.sounds.play("eat_drink")
             self.toast(message)
         elif action.id == "study_school":
             _, message = self.state.study(university=False)
@@ -159,7 +194,9 @@ class Game:
             _, message = self.state.study(university=True)
             self.toast(message)
         elif action.id == "soup":
-            _, message = self.state.take_soup()
+            success, message = self.state.take_soup()
+            if success:
+                self.sounds.play("eat_drink")
             self.toast(message)
         elif action.id.startswith("buy_home:"):
             _, message = self.state.buy_home(action.id.split(":", 1)[1])
@@ -168,7 +205,9 @@ class Game:
             _, message = self.state.buy_apartment()
             self.toast(message)
         elif action.id in {"sleep_hostel", "sleep_home"}:
-            _, message = self.state.sleep()
+            success, message = self.state.sleep()
+            if success:
+                self.sounds.play("sleep")
             self.toast(message)
         self.refresh_modal()
         self.selected_action = self._first_enabled_action()
@@ -188,14 +227,36 @@ class Game:
             return
 
         if self.state.shift:
+            self.walk_sound_timer = 0.0
+            self.work_sound_timer -= dt
+            if self.work_sound_timer <= 0:
+                self.sounds.play("work")
+                self.work_sound_timer = 0.9
             message = self.state.update_shift(dt)
             if message:
                 self.toast(message)
         else:
-            moving = self.world.move_player(self.state, dt)
+            self.work_sound_timer = 0.0
+            arrived_location = None
+            if self.state.destination:
+                moving, arrived = self.world.move_toward(self.state, self.state.destination, dt)
+                if arrived:
+                    arrived_location = self.state.destination
+                    self.state.destination = None
+            else:
+                moving = self.world.move_player(self.state, dt)
+            self.walk_sound_timer -= dt
+            if moving and self.walk_sound_timer <= 0:
+                self.sounds.play("walk")
+                self.walk_sound_timer = 0.28
+            elif not moving:
+                self.walk_sound_timer = 0.0
             message = self.state.advance_time(dt, moving)
             if message:
                 self.toast(message)
+            if arrived_location:
+                self.sounds.play("door_open")
+                self.open_modal(f"location:{arrived_location}")
 
         if self.state.update_goal():
             self.modal = self.ui.build_win_modal()
@@ -203,13 +264,23 @@ class Game:
             self.selected_action = 0
 
     def draw(self) -> None:
-        self.nearby_location = self.world.draw(self.screen, self.state, pygame.time.get_ticks())
-        self.ui.draw_hud(self.screen, self.state)
+        map_viewport = self.map_viewport()
+        self.nearby_location = self.world.draw(
+            self.screen,
+            self.state,
+            pygame.time.get_ticks(),
+            map_viewport,
+        )
+        self.ui.draw_hud(self.screen, self.state, map_viewport)
         self.ui.draw_shift(self.screen, self.state)
 
         if not self.modal and not self.state.shift and self.nearby_location:
             location_name = LOCATIONS[self.nearby_location].name
-            self.ui.draw_interaction_prompt(self.screen, f"[E] Gå inn på {location_name}")
+            self.ui.draw_interaction_prompt(
+                self.screen,
+                f"[E] Gå inn på {location_name}",
+                map_viewport,
+            )
 
         if self.modal:
             if self.modal.context == "win":

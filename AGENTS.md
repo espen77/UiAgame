@@ -17,11 +17,13 @@
 
 - `game/content.py` is the data source of truth for outfits, jobs, prices, education levels, housing, and normalized map locations. Keep the required geography when editing `LOCATIONS`.
 - `game/state.py` owns the economy, needs, education, shifts, housing, and win condition; keep it independent of rendering so it stays unit-testable.
-- `game/assets.py` loads the map and character PNGs and removes baked checkerboard backgrounds from thumbnails at load time.
-- `game/world.py` scales the complete map to fit the viewport with letterboxing; it owns movement, map markers, and player drawing. Do not reintroduce a scrolling camera.
-- `game/ui.py` owns the HUD and modal menus; `main.py` wires input and state transitions together.
+- `game/assets.py` loads the map, character PNGs, and `sounds/*.wav`; it removes baked checkerboard backgrounds from thumbnails and degrades safely when audio is unavailable.
+- `game/world.py` scales the complete map into the left viewport; it owns movement, click-to-walk targets, markers, and player drawing. Do not reintroduce a scrolling camera.
+- `game/ui.py` owns the right-side portrait/status/energy panel and modal menus; `main.py` wires keyboard, mouse navigation, audio, and state transitions together.
+- Outfit `tier` values are a strict purchase order; every purchasable tier requires all previous tiers to be owned.
 - Job/outfit pairings are intentional: `looser` is the IT-support outfit, `school` is issued by study, and `winner` is only the completion portrait.
-- Housing is data-driven: `freeway_house` is cheap with lower recovery, while `sea_house` is expensive with full recovery and higher rent.
+- Housing is data-driven: `freeway_house` is cheap with lower recovery, while `exclusive_house` is expensive with full recovery, higher rent, and is mandatory for the win condition.
+- `LOCATIONS` includes the hostel between school and university and `pharmacy` (Apotekergården); preserve these requested names and positions.
 
 ## Grimstad map
 

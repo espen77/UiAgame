@@ -5,7 +5,6 @@ from dataclasses import dataclass
 import pygame
 
 from .content import (
-    BAR_FOOD_PRICE,
     DAY_SECONDS,
     EDUCATION_POINTS_PER_LEVEL,
     FOOD_PRICE,
@@ -16,6 +15,8 @@ from .content import (
     MAX_EDUCATION_POINTS,
     NO_APARTMENT_COST,
     OUTFITS,
+    PHARMACY_FOOD_PRICE,
+    SHOP_OUTFITS,
     education_name,
 )
 
@@ -45,6 +46,7 @@ class GameState:
         self.shift: ShiftState | None = None
         self.position = pygame.Vector2(655, 575)
         self.facing = pygame.Vector2(0, 1)
+        self.destination: str | None = None
 
     @property
     def education_level(self) -> int:
@@ -100,6 +102,17 @@ class GameState:
         self.shift = None
         return f"Skiftet er ferdig. Karl tjente {job.wage} kr."
 
+    def required_outfit(self, outfit_id: str) -> str | None:
+        tier = OUTFITS[outfit_id].tier
+        return next(
+            (
+                OUTFITS[owned_id].name
+                for owned_id in SHOP_OUTFITS
+                if OUTFITS[owned_id].tier < tier and owned_id not in self.owned_outfits
+            ),
+            None,
+        )
+
     def buy_outfit(self, outfit_id: str) -> tuple[bool, str]:
         outfit = OUTFITS[outfit_id]
         if outfit_id in self.owned_outfits:
@@ -107,6 +120,9 @@ class GameState:
             return True, f"Karl tok på {outfit.name}."
         if not outfit.purchasable:
             return False, "Denne drakten kan ikke kjøpes."
+        previous_tier = self.required_outfit(outfit_id)
+        if previous_tier:
+            return False, f"Kjøp {previous_tier} før du kan kjøpe {outfit.name}."
         if self.money < outfit.price:
             return False, f"Karl trenger {outfit.price - self.money} kr mer til {outfit.name}."
         self.money -= outfit.price
@@ -142,13 +158,13 @@ class GameState:
         self.hunger = min(100.0, self.hunger + 40)
         return True, f"Karl spiste mat for {FOOD_PRICE} kr."
 
-    def buy_bar_food(self) -> tuple[bool, str]:
-        if self.money < BAR_FOOD_PRICE:
-            return False, f"Måltidet koster {BAR_FOOD_PRICE} kr."
-        self.money -= BAR_FOOD_PRICE
+    def buy_pharmacy_food(self) -> tuple[bool, str]:
+        if self.money < PHARMACY_FOOD_PRICE:
+            return False, f"Måltidet koster {PHARMACY_FOOD_PRICE} kr."
+        self.money -= PHARMACY_FOOD_PRICE
         self.hunger = min(100.0, self.hunger + 30)
         self.energy = min(100.0, self.energy + 10)
-        return True, f"Karl spiste et billig måltid på baren for {BAR_FOOD_PRICE} kr."
+        return True, f"Karl spiste et billig måltid på apotekergården for {PHARMACY_FOOD_PRICE} kr."
 
     def take_soup(self) -> tuple[bool, str]:
         if self.last_soup_day == self.day:
@@ -219,7 +235,7 @@ class GameState:
     def update_goal(self) -> bool:
         requirements = {
             "Utdanning": self.education_level >= 3,
-            "Egen bolig": self.apartment,
+            "Exclusive House": self.home_id == "exclusive_house",
             "Konsulentjobb fullført": "consultant" in self.completed_jobs,
             f"{GOAL_SAVINGS} kr spare": self.money >= GOAL_SAVINGS,
         }
@@ -232,7 +248,7 @@ class GameState:
     def goal_requirements(self) -> list[tuple[str, bool]]:
         return [
             ("Fullfør universitetsutdanning", self.education_level >= 3),
-            ("Kjøp egen bolig", self.apartment),
+            ("Eier Exclusive House", self.home_id == "exclusive_house"),
             ("Fullfør ett skift som konsulent", "consultant" in self.completed_jobs),
             (f"Ha minst {GOAL_SAVINGS} kr", self.money >= GOAL_SAVINGS),
         ]

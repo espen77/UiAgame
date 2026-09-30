@@ -10,6 +10,14 @@ from .content import OUTFITS
 ROOT = Path(__file__).resolve().parent.parent
 MAP_PATH = ROOT / "images" / "grimstad_map.png"
 CHARACTER_DIR = ROOT / "images" / "character"
+SOUND_DIR = ROOT / "sounds"
+SOUND_FILES = {
+    "walk": "walk.wav",
+    "sleep": "sleep.wav",
+    "work": "work.wav",
+    "door_open": "door_open.wav",
+    "eat_drink": "eat_drink.wav",
+}
 
 
 def load_map() -> pygame.Surface:
@@ -69,3 +77,34 @@ def load_character(filename: str, size: tuple[int, int] = (108, 162)) -> pygame.
 
 def load_characters() -> dict[str, pygame.Surface]:
     return {outfit_id: load_character(outfit.image) for outfit_id, outfit in OUTFITS.items()}
+
+
+class SoundBank:
+    def __init__(self, volume: float = 0.35) -> None:
+        self.sounds: dict[str, pygame.mixer.Sound] = {}
+        self.enabled = False
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init(frequency=44100, size=-16, channels=1, buffer=512)
+            pygame.mixer.set_num_channels(16)
+            for name, filename in SOUND_FILES.items():
+                path = SOUND_DIR / filename
+                if not path.exists():
+                    continue
+                sound = pygame.mixer.Sound(path.as_posix())
+                sound.set_volume(volume)
+                self.sounds[name] = sound
+            self.enabled = bool(self.sounds)
+        except pygame.error:
+            self.enabled = False
+
+    def play(self, name: str) -> None:
+        if not self.enabled:
+            return
+        sound = self.sounds.get(name)
+        if sound is None:
+            return
+        try:
+            sound.play()
+        except pygame.error:
+            self.enabled = False
