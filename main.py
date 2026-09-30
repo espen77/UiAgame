@@ -73,46 +73,14 @@ class Game:
                 if index < len(self.modal.actions) and self.modal.actions[index].enabled:
                     self.selected_action = index
                     self.activate(self.modal.actions[index])
-            elif event.key in (pygame.K_UP, pygame.K_w):
-                self.move_selection(-1)
-            elif event.key in (pygame.K_DOWN, pygame.K_s):
-                self.move_selection(1)
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 self.activate_selected()
             return
 
-        if event.key in (
-            pygame.K_w,
-            pygame.K_a,
-            pygame.K_s,
-            pygame.K_d,
-            pygame.K_UP,
-            pygame.K_LEFT,
-            pygame.K_DOWN,
-            pygame.K_RIGHT,
-        ):
-            self.state.destination = None
-
-        if event.key == pygame.K_e:
-            self.open_nearby_location()
-        elif event.key == pygame.K_c:
-            self.open_modal("clothing")
-        elif event.key == pygame.K_h:
-            self.open_modal("housing")
-        elif event.key == pygame.K_F1:
+        if event.key == pygame.K_F1:
             self.modal = self.ui.build_help_modal()
             self.modal_context = "help"
             self.selected_action = 0
-
-    def move_selection(self, delta: int) -> None:
-        if not self.modal or not self.modal.actions:
-            return
-        count = len(self.modal.actions)
-        for offset in range(1, count + 1):
-            index = (self.selected_action + delta * offset) % count
-            if self.modal.actions[index].enabled:
-                self.selected_action = index
-                return
 
     def activate_selected(self) -> None:
         if not self.modal or self.selected_action >= len(self.modal.actions):
@@ -244,7 +212,7 @@ class Game:
                     arrived_location = self.state.destination
                     self.state.destination = None
             else:
-                moving = self.world.move_player(self.state, dt)
+                moving = False
             self.walk_sound_timer -= dt
             if moving and self.walk_sound_timer <= 0:
                 self.sounds.play("walk")
@@ -278,7 +246,7 @@ class Game:
             location_name = LOCATIONS[self.nearby_location].name
             self.ui.draw_interaction_prompt(
                 self.screen,
-                f"[E] Gå inn på {location_name}",
+                f"Klikk for å gå til {location_name}",
                 map_viewport,
             )
 

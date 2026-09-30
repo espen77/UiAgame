@@ -27,42 +27,47 @@ The game opens in a resizable window. The complete Grimstad map always scales in
 
 | Key | Action |
 | --- | --- |
-| `WASD` / arrows | Move around Grimstad |
 | Left click | Walk to a marked place and enter automatically |
-| `E` | Enter a nearby building, shop, hostel, or house |
-| `C` | Open the clothing shop |
-| `H` | Open housing and rest |
-| `1`–`9` / arrows / Enter | Choose menu actions |
+| `1`–`9` / Enter | Choose menu actions |
 | `Esc` | Close a menu |
 | `F1` | Show help |
 
+Keyboard movement and shortcut keys are intentionally disabled; the game is played by clicking the map and menus.
+
 ## Game loop
 
-1. Start at Vidregående skole and take study weeks to unlock better jobs.
+1. Start at Skole and study from Barneskole through Fagskole to unlock better jobs.
 2. Visit the harbor or Auto45 with the right outfit to work a shift.
-3. Visit the clothing shop between Vidregående and the harbor. Clothing levels must be owned in order before the next level can be bought.
-4. Buy food at Auto45 or a cheap meal at Apotekergården, then rest at the hostel or a home.
-5. Choose housing: the house by the freeway is cheap, while Exclusive House costs more but restores full energy.
-6. Reach the final goal: university education, a consultant shift, Exclusive House ownership, and 8,000 kr saved.
+3. Visit the clothing shop between Skole and the harbor. Clothing levels must be owned in order before the next level can be bought.
+4. Buy food at Auto45 or a meal at Apotekergården, then rest at the hostel or a home.
+5. Choose housing: Billig Hus is 35 % effective, Middels Hus is 65 % effective, and Exclusive House is 100 % effective.
+6. Reach the final goal: Doktorgrad, a consultant shift, Exclusive House ownership, and 8,000 kr saved.
 
 ## Locations and housing
 
-- The university is in the west, the church in the east, Auto45 by the northern freeway, the harbor in the south, and Vidregående in the center.
-- Apotekergården and the clothing shop sit between Vidregående and the harbor. The hostel sits between Vidregående and the university.
-- `Motorveishuset` costs 3,500 kr, has 90 kr daily rent, and restores 88 energy when resting.
-- `Exclusive House` is south of the church in the bottom-right part of the map. It costs 12,000 kr, has 260 kr daily rent, restores full energy, and is required to win.
+- Universitetet i Agder is in the west, the church in the east, Auto45 by the northern freeway, the harbor in the south, and Skole in the center.
+- Apotekergården and the clothing shop sit between Skole and the harbor. The hostel sits between Skole and Universitetet i Agder.
+- `Billig Hus` costs 3,500 kr, has 90 kr daily rent, and provides 35 % effective rest.
+- `Middels Hus` costs 7,000 kr, has 170 kr daily rent, and provides 65 % effective rest.
+- `Exclusive House` is south of the church in the bottom-right part of the map. It costs 12,000 kr, has 260 kr daily rent, provides 100 % effective rest, and is required to win.
+
+## Education grades
+
+`1–7 Barneskole` · `8–10 Ungdomskole` · `11–13 Vidregående skole` · `14–15 Fagskole` · `16–18 Bachelor` · `19–20 Master` · `21–25 Doktorgrad`
+
+Skole in the middle handles grades 1–15. Universitetet i Agder handles grades 16–25.
 
 ## Jobs
 
 | Job | Outfit | Location | Education | Pay per shift |
 | --- | --- | --- | --- | ---: |
-| Havneassistent | Shorts | Harbor | Grunnskole | 120 kr |
-| Butikkassistent | Casual | Auto45 | Grunnskole | 160 kr |
-| Lagerarbeider | Hoodie | Harbor | Fagskole | 240 kr |
-| Bilmekaniker | Arbeidskledel | Auto45 | Videregående | 340 kr |
-| IT-support | Gamer-hoodie | Universitetet | Videregående | 400 kr |
-| Menighetsarbeider | Dress | Kirken | Videregående | 360 kr |
-| Universitetskonsulent | Dress | Universitetet | Universitet | 600 kr |
+| Havneassistent | Shorts | Harbor | Barneskole 1 | 120 kr |
+| Butikkassistent | Casual | Auto45 | Barneskole 1 | 170 kr |
+| Lagerarbeider | Hoodie | Harbor | Ungdomskole 8 | 280 kr |
+| Bilmekaniker | Arbeidskledel | Auto45 | Fagskole 14 | 430 kr |
+| IT-support | Gamer-hoodie | Universitetet i Agder | Bachelor 16 | 560 kr |
+| Menighetsarbeider | Dress | Kirken | Bachelor 16 | 480 kr |
+| Universitetskonsulent | Dress | Universitetet i Agder | Master 19 | 850 kr |
 
 ## Sounds
 

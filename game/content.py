@@ -113,7 +113,7 @@ JOBS: dict[str, Job] = {
         name="Havneassistent",
         outfit="shorts",
         location="harbor",
-        education=0,
+        education=1,
         wage=120,
         duration=4.0,
         description="Hjelper ved kaia og får grunnleggende arbeidserfaring.",
@@ -123,8 +123,8 @@ JOBS: dict[str, Job] = {
         name="Butikkassistent",
         outfit="casual",
         location="gas_station",
-        education=0,
-        wage=160,
+        education=1,
+        wage=170,
         duration=4.0,
         description="Betjener kunder og jobber i butikken ved Auto45.",
     ),
@@ -133,8 +133,8 @@ JOBS: dict[str, Job] = {
         name="Lagerarbeider",
         outfit="hoodie",
         location="harbor",
-        education=1,
-        wage=240,
+        education=8,
+        wage=280,
         duration=5.0,
         description="Flytter varer og tar ansvar i lageret ved havnen.",
     ),
@@ -143,8 +143,8 @@ JOBS: dict[str, Job] = {
         name="Bilmekaniker",
         outfit="boilersuit",
         location="gas_station",
-        education=2,
-        wage=340,
+        education=14,
+        wage=430,
         duration=6.0,
         description="Reparerer biler og får fast tilknytning til Auto45.",
     ),
@@ -153,8 +153,8 @@ JOBS: dict[str, Job] = {
         name="IT-support",
         outfit="looser",
         location="university",
-        education=2,
-        wage=400,
+        education=16,
+        wage=560,
         duration=6.0,
         description="Løser problemer for ansatte og studenter ved universitetet.",
     ),
@@ -163,8 +163,8 @@ JOBS: dict[str, Job] = {
         name="Menighetsarbeider",
         outfit="suit",
         location="church",
-        education=2,
-        wage=360,
+        education=16,
+        wage=480,
         duration=5.0,
         description="Organiserer arrangementer og bidrar i menigheten.",
     ),
@@ -173,8 +173,8 @@ JOBS: dict[str, Job] = {
         name="Universitetskonsulent",
         outfit="suit",
         location="university",
-        education=3,
-        wage=600,
+        education=19,
+        wage=850,
         duration=7.0,
         description="Karrieretoppen: rådgir universitetet og tjener gode penger.",
     ),
@@ -196,8 +196,8 @@ class Location:
 LOCATIONS: dict[str, Location] = {
     "university": Location(
         id="university",
-        name="Universitetet i vest",
-        short_name="Universitet",
+        name="Universitetet i Agder",
+        short_name="Universitetet i Agder",
         x=0.17,
         y=0.25,
         color=(72, 96, 196),
@@ -223,12 +223,21 @@ LOCATIONS: dict[str, Location] = {
     ),
     "freeway_house": Location(
         id="freeway_house",
-        name="Billig hus ved motorveien",
-        short_name="Motorveishuset",
+        name="Billig Hus ved motorveien",
+        short_name="Billig Hus",
         x=0.78,
         y=0.20,
         color=(214, 172, 62),
         description="Billig bolig nær motorveien, men langt fra havet.",
+    ),
+    "middle_house": Location(
+        id="middle_house",
+        name="Middels Hus nær sentrum",
+        short_name="Middels Hus",
+        x=0.68,
+        y=0.57,
+        color=(150, 116, 200),
+        description="Middels bolig med bedre hvile enn Billig Hus.",
     ),
     "harbor": Location(
         id="harbor",
@@ -250,8 +259,8 @@ LOCATIONS: dict[str, Location] = {
     ),
     "school": Location(
         id="school",
-        name="Vidregående skole i midten",
-        short_name="Vidregående",
+        name="Skolen i midten",
+        short_name="Skole",
         x=0.48,
         y=0.48,
         color=(52, 158, 96),
@@ -293,7 +302,7 @@ class Housing:
     name: str
     price: int
     rent: int
-    recovery: int
+    efficiency: float
     location: str
     description: str
 
@@ -301,36 +310,51 @@ class Housing:
 HOUSING: dict[str, Housing] = {
     "freeway_house": Housing(
         id="freeway_house",
-        name="Billig hus ved motorveien",
+        name="Billig Hus",
         price=3500,
         rent=90,
-        recovery=88,
+        efficiency=0.35,
         location="freeway_house",
-        description="Billig bolig nær motorveien. Praktisk, men ikke luksus.",
+        description="Billig bolig nær motorveien. Praktisk, men gir minst rest.",
+    ),
+    "middle_house": Housing(
+        id="middle_house",
+        name="Middels Hus",
+        price=7000,
+        rent=170,
+        efficiency=0.65,
+        location="middle_house",
+        description="Middels bolig nær sentrum med 65 % effektiv hvile.",
     ),
     "exclusive_house": Housing(
         id="exclusive_house",
         name="Exclusive House",
         price=12000,
         rent=260,
-        recovery=100,
+        efficiency=1.0,
         location="exclusive_house",
-        description="Utsikt sør for kirken, full rest og høy daglig leie.",
+        description="Utsikt sør for kirken, 100 % effektiv hvile og høy daglig leie.",
     ),
 }
 
 EDUCATION_NAMES = {
-    0: "Grunnskole",
-    1: "Fagskole",
-    2: "Videregående",
-    3: "Universitet",
+    "Barneskole": (1, 7),
+    "Ungdomskole": (8, 10),
+    "Vidregående skole": (11, 13),
+    "Fagskole": (14, 15),
+    "Bachelor": (16, 18),
+    "Master": (19, 20),
+    "Doktorgrad": (21, 25),
 }
 
-EDUCATION_POINTS_PER_LEVEL = 3
-MAX_EDUCATION_POINTS = 9
+MAX_EDUCATION_GRADE = 25
+SCHOOL_MAX_GRADE = 15
+UNIVERSITY_MIN_GRADE = 15
+SCHOOL_STUDY_COST = 120
+UNIVERSITY_STUDY_COST = 300
 DAY_SECONDS = 180.0
-PHARMACY_FOOD_PRICE = 40
-FOOD_PRICE = 55
+PHARMACY_FOOD_PRICE = 65
+FOOD_PRICE = 95
 HOSTEL_PRICE = 80
 NO_APARTMENT_COST = 35
 GOAL_SAVINGS = 8000
@@ -348,5 +372,9 @@ def housing_at(location_id: str) -> Housing | None:
     return next((home for home in HOUSING.values() if home.location == location_id), None)
 
 
-def education_name(level: int) -> str:
-    return EDUCATION_NAMES[max(0, min(level, 3))]
+def education_name(grade: int) -> str:
+    grade = max(1, min(MAX_EDUCATION_GRADE, grade))
+    for name, (first, last) in EDUCATION_NAMES.items():
+        if first <= grade <= last:
+            return name
+    return "Doktorgrad"

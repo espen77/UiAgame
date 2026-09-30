@@ -40,23 +40,6 @@ class World:
                 nearest_distance = distance
         return nearest_id
 
-    def move_player(self, state: GameState, dt: float) -> bool:
-        keys = pygame.key.get_pressed()
-        direction = pygame.Vector2(
-            int(keys[pygame.K_d] or keys[pygame.K_RIGHT])
-            - int(keys[pygame.K_a] or keys[pygame.K_LEFT]),
-            int(keys[pygame.K_s] or keys[pygame.K_DOWN])
-            - int(keys[pygame.K_w] or keys[pygame.K_UP]),
-        )
-        if direction.length_squared() == 0:
-            return False
-        direction = direction.normalize()
-        state.position += direction * self.player_speed * dt
-        state.position.x = max(24.0, min(self.size[0] - 24.0, state.position.x))
-        state.position.y = max(24.0, min(self.size[1] - 24.0, state.position.y))
-        state.facing = direction
-        return True
-
     def _fit_map_to_viewport(self, viewport: pygame.Rect) -> None:
         map_width, map_height = self.size
         scale = min(viewport.width / map_width, viewport.height / map_height)

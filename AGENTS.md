@@ -15,15 +15,16 @@
 
 ## Architecture
 
-- `game/content.py` is the data source of truth for outfits, jobs, prices, education levels, housing, and normalized map locations. Keep the required geography when editing `LOCATIONS`.
-- `game/state.py` owns the economy, needs, education, shifts, housing, and win condition; keep it independent of rendering so it stays unit-testable.
+- `game/content.py` is the data source of truth for outfits, jobs, salaries, meal prices, education grades, housing, and normalized map locations. Education is grade-based: 1–7 Barneskole, 8–10 Ungdomskole, 11–13 Vidregående skole, 14–15 Fagskole, 16–18 Bachelor, 19–20 Master, 21–25 Doktorgrad.
+- `game/state.py` owns the economy, needs, education grade, shifts, housing efficiency, and win condition; keep it independent of rendering so it stays unit-testable.
 - `game/assets.py` loads the map, character PNGs, and `sounds/*.wav`; it removes baked checkerboard backgrounds from thumbnails and degrades safely when audio is unavailable.
 - `game/world.py` scales the complete map into the left viewport; it owns movement, click-to-walk targets, markers, and player drawing. Do not reintroduce a scrolling camera.
 - `game/ui.py` owns the right-side portrait/status/energy panel and modal menus; `main.py` wires keyboard, mouse navigation, audio, and state transitions together.
 - Outfit `tier` values are a strict purchase order; every purchasable tier requires all previous tiers to be owned.
 - Job/outfit pairings are intentional: `looser` is the IT-support outfit, `school` is issued by study, and `winner` is only the completion portrait.
-- Housing is data-driven: `freeway_house` is cheap with lower recovery, while `exclusive_house` is expensive with full recovery, higher rent, and is mandatory for the win condition.
-- `LOCATIONS` includes the hostel between school and university and `pharmacy` (Apotekergården); preserve these requested names and positions.
+- Housing is data-driven: `freeway_house`/Billig Hus is 35 % effective, `middle_house`/Middels Hus is 65 %, and `exclusive_house`/Exclusive House is 100 % and mandatory for the win condition.
+- `LOCATIONS` includes the hostel between Skole and Universitetet i Agder and `pharmacy` (Apotekergården); preserve these requested names and positions.
+- Keyboard movement and shortcut keys are intentionally disabled; `World.move_toward` is mouse-navigation-only.
 
 ## Grimstad map
 

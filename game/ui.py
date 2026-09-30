@@ -5,15 +5,20 @@ from dataclasses import dataclass
 import pygame
 
 from .content import (
-    PHARMACY_FOOD_PRICE,
     FOOD_PRICE,
     GOAL_SAVINGS,
     HOUSING,
     HOSTEL_PRICE,
     JOBS,
     LOCATIONS,
+    MAX_EDUCATION_GRADE,
     OUTFITS,
+    PHARMACY_FOOD_PRICE,
+    SCHOOL_MAX_GRADE,
+    SCHOOL_STUDY_COST,
     SHOP_OUTFITS,
+    UNIVERSITY_MIN_GRADE,
+    UNIVERSITY_STUDY_COST,
     housing_at,
     jobs_at,
     jobs_for_outfit,
@@ -108,33 +113,34 @@ class GameUI:
                 )
             )
         elif location_id == "school":
+            school_finished = state.education_grade >= SCHOOL_MAX_GRADE
             actions.append(
                 ModalAction(
                     id="study_school",
-                    label="Studieuke ved Vidregående (-150 kr)",
-                    enabled=state.money >= 150 and state.education_progress < 6,
+                    label=f"Studieuke ved Skolen (-{SCHOOL_STUDY_COST} kr)",
+                    enabled=not school_finished and state.money >= SCHOOL_STUDY_COST,
                     hint=(
-                        "Utdanningsnivået øker etter hver tredje studieuke."
-                        if state.money >= 150 and state.education_progress < 6
-                        else "Videregående er fullført. Universitetet ligger i vest."
-                        if state.education_progress >= 6
-                        else "Karl trenger 150 kr til studiene."
+                        f"Grade {state.education_grade}: {state.education_label}."
+                        if not school_finished and state.money >= SCHOOL_STUDY_COST
+                        else "Skole dekker Barneskole, Ungdomskole, Vidregående skole og Fagskole."
+                        if school_finished
+                        else f"Karl trenger {SCHOOL_STUDY_COST} kr til studiene."
                     ),
                 )
             )
         elif location_id == "university":
-            university_blocked = state.education_level < 2
+            university_blocked = state.education_grade < UNIVERSITY_MIN_GRADE
             actions.append(
                 ModalAction(
                     id="study_university",
-                    label="Studieuke ved universitetet (-350 kr)",
-                    enabled=not university_blocked and state.education_progress < 9 and state.money >= 350,
+                    label=f"Studieuke ved Universitetet i Agder (-{UNIVERSITY_STUDY_COST} kr)",
+                    enabled=not university_blocked and state.education_grade < MAX_EDUCATION_GRADE and state.money >= UNIVERSITY_STUDY_COST,
                     hint=(
-                        "Krever ferdig videregående."
+                        "Krever ferdig Fagskole."
                         if university_blocked
-                        else "Fullfører universitetsutdanningen."
-                        if state.money >= 350
-                        else "Karl trenger 350 kr til studiene."
+                        else "Fullfører Bachelor, Master eller Doktorgrad."
+                        if state.money >= UNIVERSITY_STUDY_COST
+                        else f"Karl trenger {UNIVERSITY_STUDY_COST} kr til studiene."
                     ),
                 )
             )
@@ -164,9 +170,9 @@ class GameUI:
                     ),
                     enabled=not is_current and state.money >= cost,
                     hint=(
-                        f"Leie: {home.rent} kr per dag. {home.description}"
+                        f"Leie: {home.rent} kr per dag. Hvile: {int(home.efficiency * 100)} %. {home.description}"
                         if not is_current
-                        else f"Du bor allerede her. Leie: {home.rent} kr per dag."
+                        else f"Du bor allerede her. Leie: {home.rent} kr per dag. Hvile: {int(home.efficiency * 100)} %."
                     ),
                 )
             )
@@ -177,7 +183,7 @@ class GameUI:
             title=location.name,
             subtitle=location.description,
             lines=[
-                f"Utdanning: {state.education_label}",
+                f"Utdanning: Grade {state.education_grade} – {state.education_label}",
                 f"Penger: {state.money} kr",
                 f"Nåværende klær: {OUTFITS[state.current_outfit].name}",
             ],
@@ -218,7 +224,7 @@ class GameUI:
             context="clothing",
             title="Klesbutikken",
             subtitle="Bedre klærer åpner bedre jobber. En jobb kler Karl automatisk.",
-            lines=[f"Penger: {state.money} kr", f"Utdanning: {state.education_label}"],
+            lines=[f"Penger: {state.money} kr", f"Utdanning: Grade {state.education_grade} – {state.education_label}"],
             actions=actions,
         )
 
@@ -231,11 +237,11 @@ class GameUI:
             if is_current:
                 label = f"Bor her: {home.name}"
                 enabled = False
-                hint = f"Du bor allerede her. Leie: {home.rent} kr per dag."
+                hint = f"Du bor allerede her. Leie: {home.rent} kr per dag. Hvile: {int(home.efficiency * 100)} %."
             else:
                 label = f"{'Oppgrader til' if current_price else 'Kjøp'} {home.name} (-{cost} kr)"
                 enabled = state.money >= cost and home.price > current_price
-                hint = f"Leie: {home.rent} kr per dag. {home.description}"
+                hint = f"Leie: {home.rent} kr per dag. Hvile: {int(home.efficiency * 100)} %. {home.description}"
             actions.append(ModalAction(id=f"buy_home:{home.id}", label=label, enabled=enabled, hint=hint))
 
         if state.apartment:
@@ -243,7 +249,7 @@ class GameUI:
                 ModalAction(
                     id="sleep_home",
                     label="Hvil i egen bolig (gratis)",
-                    hint=f"Full energi ({state.home_label}).",
+                    hint=f"Hvile effekt: {int(HOUSING[state.home_id].efficiency * 100)} % ({state.home_label}).",
                 )
             )
         else:
@@ -259,7 +265,7 @@ class GameUI:
         return Modal(
             context="housing",
             title="Bolig i Grimstad",
-            subtitle="Billig ved motorveien eller Exclusive House sør for kirken.",
+            subtitle="Billig Hus, Middels Hus eller Exclusive House sør for kirken.",
             lines=[
                 f"Penger: {state.money} kr",
                 f"Nåværende bolig: {state.home_label}",
@@ -274,14 +280,11 @@ class GameUI:
             title="Karl i Grimstad",
             subtitle="Jobb, studer, kjøp klær og spar til en egen bolig.",
             lines=[
-                "WASD eller piltaster: gå",
-                "E: gå inn på et sted",
-                "C: klesbutikken",
-                "H: bolig og hvile",
-                "1-9: velg en handling i en meny",
+                "Klikk på et kartsted for at Karl skal gå dit og gå inn",
+                "1-9 eller Enter: velg handling i en meny",
                 "Esc: lukk meny",
-                "Mål: universitetsutdanning, Exclusive House, konsulentjobb og minst 8000 kr.",
-                "Klikk på et kartsted for at Karl skal gå dit og gå inn.",
+                "Mål: Doktorgrad, Exclusive House, konsulentjobb og minst 8000 kr.",
+                "Utdanning: Barneskole 1-7, Ungdomskole 8-10, Vidregående 11-13, Fagskole 14-15, Bachelor 16-18, Master 19-20, Doktorgrad 21-25.",
             ],
             actions=[ModalAction(id="close", label="Spill (Esc)", hint="Lukk hjelpevinduet.")],
         )
@@ -377,7 +380,7 @@ class GameUI:
         )
         y = self._draw_wrapped(
             surface,
-            f"Utdanning: {state.education_label}  •  Dag: {state.day}",
+            f"Grade {state.education_grade}: {state.education_label}  •  Dag: {state.day}",
             self.small_font,
             inner.x,
             y,
@@ -415,7 +418,7 @@ class GameUI:
 
         self._draw_wrapped(
             surface,
-            "WASD gå  •  E gå inn  •  C klær",
+            "Klikk kartet for å gå og gå inn",
             self.tiny_font,
             inner.x,
             panel.bottom - 54,
@@ -425,7 +428,7 @@ class GameUI:
         )
         self._draw_wrapped(
             surface,
-            "Klikk sted = gå dit  •  H bolig  •  F1 hjelp",
+            "1-9 / Enter = menyvalg  •  F1 hjelp",
             self.tiny_font,
             inner.x,
             panel.bottom - 32,
@@ -439,8 +442,8 @@ class GameUI:
             return f"Går til {LOCATIONS[state.destination].name} …"
         if state.won:
             return "Målet er fullført! Karl er en suksess i Grimstad."
-        if state.education_level < 3:
-            return f"Studer mer: {state.education_progress}/9 studieuker."
+        if state.education_grade < MAX_EDUCATION_GRADE:
+            return f"Studer mer: grade {state.education_grade} ({state.education_label})."
         if state.home_id != "exclusive_house":
             return "Kjøp Exclusive House sør for kirken."
         if "consultant" not in state.completed_jobs:
@@ -562,10 +565,8 @@ class GameUI:
         candidates = [
             job
             for job in JOBS.values()
-            if job.outfit == state.current_outfit and state.education_level >= job.education
+            if job.outfit == state.current_outfit and state.education_grade >= job.education
         ]
-        if not candidates:
-            candidates = [job for job in JOBS.values() if job.outfit == state.current_outfit]
         return max(candidates, key=lambda job: job.wage) if candidates else None
 
     def _bar(

@@ -6,17 +6,20 @@ import pygame
 
 from .content import (
     DAY_SECONDS,
-    EDUCATION_POINTS_PER_LEVEL,
     FOOD_PRICE,
     GOAL_SAVINGS,
     HOUSING,
     HOSTEL_PRICE,
     JOBS,
-    MAX_EDUCATION_POINTS,
+    MAX_EDUCATION_GRADE,
     NO_APARTMENT_COST,
     OUTFITS,
     PHARMACY_FOOD_PRICE,
+    SCHOOL_MAX_GRADE,
+    SCHOOL_STUDY_COST,
     SHOP_OUTFITS,
+    UNIVERSITY_MIN_GRADE,
+    UNIVERSITY_STUDY_COST,
     education_name,
 )
 
@@ -33,7 +36,7 @@ class GameState:
         self.money = 500
         self.hunger = 100.0
         self.energy = 100.0
-        self.education_progress = 0
+        self.education_grade = 1
         self.owned_outfits = {"shorts"}
         self.current_outfit = "shorts"
         self.completed_jobs: set[str] = set()
@@ -49,12 +52,8 @@ class GameState:
         self.destination: str | None = None
 
     @property
-    def education_level(self) -> int:
-        return min(3, self.education_progress // EDUCATION_POINTS_PER_LEVEL)
-
-    @property
     def education_label(self) -> str:
-        return education_name(self.education_level)
+        return education_name(self.education_grade)
 
     @property
     def home_label(self) -> str:
@@ -68,9 +67,9 @@ class GameState:
         job = JOBS[job_id]
         if job.outfit not in self.owned_outfits:
             return f"Kjøp {OUTFITS[job.outfit].name} for å få denne jobben."
-        if self.education_level < job.education:
+        if self.education_grade < job.education:
             required = education_name(job.education)
-            return f"Krev {required}. Karl har {self.education_label}."
+            return f"Krev {required}. Karl er på grade {self.education_grade}."
         if self.hunger < 15:
             return "Karl er for sulten. Kjøp mat først."
         if self.energy < 20:
@@ -131,24 +130,23 @@ class GameState:
         return True, f"{outfit.name} kjøpt og tatt på."
 
     def study(self, university: bool) -> tuple[bool, str]:
-        if self.education_progress >= MAX_EDUCATION_POINTS:
-            return False, "Karl har allerede fullført høyeste utdanning."
-        if university and self.education_level < 2:
-            return False, "Universitetet krever ferdig videregående."
-        if not university and self.education_progress >= 6:
-            return False, "Videregående er fullført. Universitetet ligger i vest."
-        cost = 350 if university else 150
+        if self.education_grade >= MAX_EDUCATION_GRADE:
+            return False, "Karl har allerede fullført Doktorgrad."
+        if university and self.education_grade < UNIVERSITY_MIN_GRADE:
+            return False, "Universitetet i Agder krever ferdig Fagskole."
+        if not university and self.education_grade >= SCHOOL_MAX_GRADE:
+            return False, "Skole er fullført. Universitetet i Agder ligger i vest."
+        cost = UNIVERSITY_STUDY_COST if university else SCHOOL_STUDY_COST
         if self.money < cost:
             return False, f"Studier koster {cost} kr."
         self.money -= cost
-        self.education_progress += 1
+        self.education_grade += 1
         if "school" not in self.owned_outfits:
             self.owned_outfits.add("school")
         self.current_outfit = "school"
         self.energy = max(0.0, self.energy - 6)
         return True, (
-            f"En studieuke fullført. Utdanning: {self.education_label} "
-            f"({self.education_progress}/{MAX_EDUCATION_POINTS})."
+            f"En studieuke fullført. Grade {self.education_grade}: {self.education_label}."
         )
 
     def buy_food(self) -> tuple[bool, str]:
@@ -164,7 +162,7 @@ class GameState:
         self.money -= PHARMACY_FOOD_PRICE
         self.hunger = min(100.0, self.hunger + 30)
         self.energy = min(100.0, self.energy + 10)
-        return True, f"Karl spiste et billig måltid på apotekergården for {PHARMACY_FOOD_PRICE} kr."
+        return True, f"Karl spiste et måltid på Apotekergården for {PHARMACY_FOOD_PRICE} kr."
 
     def take_soup(self) -> tuple[bool, str]:
         if self.last_soup_day == self.day:
@@ -199,12 +197,12 @@ class GameState:
             if self.money < HOSTEL_PRICE:
                 return False, f"Billig overnatting koster {HOSTEL_PRICE} kr."
             self.money -= HOSTEL_PRICE
-            self.energy = min(100.0, 86)
+            self.energy = min(100.0, self.energy + 35)
             return True, f"Karl sov på hospits for {HOSTEL_PRICE} kr."
         home = HOUSING[self.home_id]
-        self.energy = float(home.recovery)
+        self.energy = min(100.0, self.energy + (100.0 - self.energy) * home.efficiency)
         self.hunger = max(0.0, self.hunger - 8)
-        return True, f"Karl sov godt i {home.name.lower()}."
+        return True, f"Karl sov i {home.name} med {int(home.efficiency * 100)} % effektiv hvile."
 
     def advance_time(self, dt: float, moving: bool) -> str | None:
         hunger_drain = 0.32
@@ -226,15 +224,16 @@ class GameState:
         paid = min(self.money, cost)
         self.money -= paid
         self.hunger = max(0.0, self.hunger - 12)
-        recovery = HOUSING[self.home_id].recovery if self.home_id else 14
-        self.energy = min(100.0, self.energy + recovery * 0.35)
+        efficiency = HOUSING[self.home_id].efficiency if self.home_id else 0.0
+        recovery = 14 + (100.0 - self.energy) * efficiency * 0.15
+        self.energy = min(100.0, self.energy + recovery)
         if paid < cost:
             return f"Dag {self.day}: Karl klarte ikke boligkostnaden på {cost} kr."
         return f"Dag {self.day}: boligkostnad {cost} kr. Energi og mat må fylles."
 
     def update_goal(self) -> bool:
         requirements = {
-            "Utdanning": self.education_level >= 3,
+            "Doktorgrad": self.education_grade >= 21,
             "Exclusive House": self.home_id == "exclusive_house",
             "Konsulentjobb fullført": "consultant" in self.completed_jobs,
             f"{GOAL_SAVINGS} kr spare": self.money >= GOAL_SAVINGS,
@@ -247,7 +246,7 @@ class GameState:
 
     def goal_requirements(self) -> list[tuple[str, bool]]:
         return [
-            ("Fullfør universitetsutdanning", self.education_level >= 3),
+            ("Fullfør Doktorgrad", self.education_grade >= 21),
             ("Eier Exclusive House", self.home_id == "exclusive_house"),
             ("Fullfør ett skift som konsulent", "consultant" in self.completed_jobs),
             (f"Ha minst {GOAL_SAVINGS} kr", self.money >= GOAL_SAVINGS),
