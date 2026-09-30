@@ -99,7 +99,7 @@ class Game:
         if location_id:
             self.open_modal(f"location:{location_id}")
         else:
-            self.toast("Gå nærmere universitetet, kirken, Auto45, havnen eller skolen.")
+            self.toast("Gå nærmere en bygning, butikk, bar eller bolig for å gå inn.")
 
     def open_modal(self, context: str) -> None:
         self.modal_context = context
@@ -143,8 +143,14 @@ class Game:
         if action.id.startswith("outfit:"):
             _, message = self.state.buy_outfit(action.id.split(":", 1)[1])
             self.toast(message)
+        elif action.id == "open_clothing":
+            self.open_modal("clothing")
+            return
         elif action.id == "buy_food":
             _, message = self.state.buy_food()
+            self.toast(message)
+        elif action.id == "buy_bar_food":
+            _, message = self.state.buy_bar_food()
             self.toast(message)
         elif action.id == "study_school":
             _, message = self.state.study(university=False)
@@ -154,6 +160,9 @@ class Game:
             self.toast(message)
         elif action.id == "soup":
             _, message = self.state.take_soup()
+            self.toast(message)
+        elif action.id.startswith("buy_home:"):
+            _, message = self.state.buy_home(action.id.split(":", 1)[1])
             self.toast(message)
         elif action.id == "buy_apartment":
             _, message = self.state.buy_apartment()

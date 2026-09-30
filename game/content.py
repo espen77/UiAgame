@@ -212,6 +212,15 @@ LOCATIONS: dict[str, Location] = {
         color=(214, 96, 64),
         description="Butikk, mat og bilmekanikk ved motorveyen i nord.",
     ),
+    "freeway_house": Location(
+        id="freeway_house",
+        name="Billig hus ved motorveien",
+        short_name="Motorveishuset",
+        x=0.78,
+        y=0.20,
+        color=(214, 172, 62),
+        description="Billig bolig nær motorveien, men langt fra havet.",
+    ),
     "harbor": Location(
         id="harbor",
         name="Havnen i sør",
@@ -221,6 +230,15 @@ LOCATIONS: dict[str, Location] = {
         color=(36, 150, 178),
         description="Havneassistent og lagerarbeid nær vannet.",
     ),
+    "sea_house": Location(
+        id="sea_house",
+        name="Dyrt hus ved havet",
+        short_name="Huset ved havet",
+        x=0.27,
+        y=0.70,
+        color=(52, 178, 196),
+        description="Eksklusiv bolig med utsikt, høy leie og beste rest.",
+    ),
     "school": Location(
         id="school",
         name="Vidregående skole i midten",
@@ -229,6 +247,57 @@ LOCATIONS: dict[str, Location] = {
         y=0.48,
         color=(52, 158, 96),
         description="Studier for å låse opp bedre jobber.",
+    ),
+    "bar": Location(
+        id="bar",
+        name="Baren mellom skolen og havnen",
+        short_name="Baren",
+        x=0.35,
+        y=0.60,
+        color=(186, 78, 120),
+        description="Billig mat og litt ekstra energi til kvelden.",
+    ),
+    "clothing_shop": Location(
+        id="clothing_shop",
+        name="Klesbutikken mellom skolen og havnen",
+        short_name="Klesbutikken",
+        x=0.58,
+        y=0.60,
+        color=(120, 86, 190),
+        description="Her kan Karl kjøpe klærer som åpner nye jobber.",
+    ),
+}
+
+
+@dataclass(frozen=True)
+class Housing:
+    id: str
+    name: str
+    price: int
+    rent: int
+    recovery: int
+    location: str
+    description: str
+
+
+HOUSING: dict[str, Housing] = {
+    "freeway_house": Housing(
+        id="freeway_house",
+        name="Billig hus ved motorveien",
+        price=3500,
+        rent=90,
+        recovery=88,
+        location="freeway_house",
+        description="Billig bolig nær motorveien. Praktisk, men ikke luksus.",
+    ),
+    "sea_house": Housing(
+        id="sea_house",
+        name="Dyrt hus ved havet",
+        price=12000,
+        rent=260,
+        recovery=100,
+        location="sea_house",
+        description="Utsikt over havet, full rest og høy daglig leie.",
     ),
 }
 
@@ -242,10 +311,9 @@ EDUCATION_NAMES = {
 EDUCATION_POINTS_PER_LEVEL = 3
 MAX_EDUCATION_POINTS = 9
 DAY_SECONDS = 180.0
-APARTMENT_PRICE = 5500
+BAR_FOOD_PRICE = 40
 FOOD_PRICE = 55
 HOSTEL_PRICE = 80
-APARTMENT_RENT = 120
 NO_APARTMENT_COST = 35
 GOAL_SAVINGS = 8000
 
@@ -256,6 +324,10 @@ def jobs_at(location_id: str) -> tuple[Job, ...]:
 
 def jobs_for_outfit(outfit_id: str) -> tuple[Job, ...]:
     return tuple(job for job in JOBS.values() if job.outfit == outfit_id)
+
+
+def housing_at(location_id: str) -> Housing | None:
+    return next((home for home in HOUSING.values() if home.location == location_id), None)
 
 
 def education_name(level: int) -> str:

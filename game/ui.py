@@ -5,14 +5,16 @@ from dataclasses import dataclass
 import pygame
 
 from .content import (
-    APARTMENT_PRICE,
+    BAR_FOOD_PRICE,
     FOOD_PRICE,
     GOAL_SAVINGS,
+    HOUSING,
     HOSTEL_PRICE,
     JOBS,
     LOCATIONS,
     OUTFITS,
     SHOP_OUTFITS,
+    housing_at,
     jobs_at,
     jobs_for_outfit,
 )
@@ -79,6 +81,23 @@ class GameUI:
                     hint="Mat holder Karl i gang mens han jobber.",
                 )
             )
+        elif location_id == "bar":
+            actions.append(
+                ModalAction(
+                    id="buy_bar_food",
+                    label=f"Kjøp måltid (+30 mat, +10 energi, -{BAR_FOOD_PRICE} kr)",
+                    enabled=state.money >= BAR_FOOD_PRICE,
+                    hint="Billig mat og litt ekstra energi til kvelden.",
+                )
+            )
+        elif location_id == "clothing_shop":
+            actions.append(
+                ModalAction(
+                    id="open_clothing",
+                    label="Åpne klesbutikken",
+                    hint="Kjøp klær som åpner nye jobber.",
+                )
+            )
         elif location_id == "school":
             actions.append(
                 ModalAction(
@@ -118,6 +137,28 @@ class GameUI:
                     label="Hent varm suppe (gratis)",
                     enabled=soup_available,
                     hint="Menigheten hjelper Karl én gang per dag." if soup_available else "Suppen er allerede hentet i dag.",
+                )
+            )
+
+        home = housing_at(location_id)
+        if home:
+            is_current = state.home_id == home.id
+            current_price = HOUSING[state.home_id].price if state.home_id else 0
+            cost = max(0, home.price - current_price)
+            actions.append(
+                ModalAction(
+                    id=f"buy_home:{home.id}",
+                    label=(
+                        f"Bor her: {home.name}"
+                        if is_current
+                        else f"Kjøp {home.name} (-{cost} kr)"
+                    ),
+                    enabled=not is_current and state.money >= cost,
+                    hint=(
+                        f"Leie: {home.rent} kr per dag. {home.description}"
+                        if not is_current
+                        else f"Du bor allerede her. Leie: {home.rent} kr per dag."
+                    ),
                 )
             )
 
@@ -169,23 +210,29 @@ class GameUI:
 
     def build_housing_modal(self, state: GameState) -> Modal:
         actions: list[ModalAction] = []
+        for home in HOUSING.values():
+            is_current = state.home_id == home.id
+            current_price = HOUSING[state.home_id].price if state.home_id else 0
+            cost = max(0, home.price - current_price)
+            if is_current:
+                label = f"Bor her: {home.name}"
+                enabled = False
+                hint = f"Du bor allerede her. Leie: {home.rent} kr per dag."
+            else:
+                label = f"{'Oppgrader til' if current_price else 'Kjøp'} {home.name} (-{cost} kr)"
+                enabled = state.money >= cost and home.price > current_price
+                hint = f"Leie: {home.rent} kr per dag. {home.description}"
+            actions.append(ModalAction(id=f"buy_home:{home.id}", label=label, enabled=enabled, hint=hint))
+
         if state.apartment:
             actions.append(
                 ModalAction(
                     id="sleep_home",
                     label="Hvil i egen bolig (gratis)",
-                    hint="Full energi, men Karl blir litt sulten.",
+                    hint=f"Full energi ({state.home_label}).",
                 )
             )
         else:
-            actions.append(
-                ModalAction(
-                    id="buy_apartment",
-                    label=f"Kjøp bolig (-{APARTMENT_PRICE} kr)",
-                    enabled=state.money >= APARTMENT_PRICE,
-                    hint="Egen bolig gir bedre hvile, men koster leie hver dag.",
-                )
-            )
             actions.append(
                 ModalAction(
                     id="sleep_hostel",
@@ -198,8 +245,12 @@ class GameUI:
         return Modal(
             context="housing",
             title="Bolig i Grimstad",
-            subtitle="Jobb, spar og kjøp deg en egen bolig.",
-            lines=[f"Penger: {state.money} kr", "Eier bolig" if state.apartment else "Bor på hospits"],
+            subtitle="Billig ved motorveien eller dyrt ved havet.",
+            lines=[
+                f"Penger: {state.money} kr",
+                f"Nåværende bolig: {state.home_label}",
+                f"Daglig kostnad: {state.daily_housing_cost} kr",
+            ],
             actions=actions,
         )
 
@@ -216,6 +267,7 @@ class GameUI:
                 "1-9: velg en handling i en meny",
                 "Esc: lukk meny",
                 "Mål: universitetsutdanning, egen bolig, konsulentjobb og minst 8000 kr.",
+                "Hus: billig ved motorveien, dyrt og luksuriøst ved havet.",
             ],
             actions=[ModalAction(id="close", label="Spill (Esc)", hint="Lukk hjelpevinduet.")],
         )
@@ -358,7 +410,7 @@ class GameUI:
         surface.blit(scaled, rect)
 
     def _draw_status_card(self, surface: pygame.Surface, state: GameState) -> None:
-        rect = pygame.Rect(18, 18, 320, 142)
+        rect = pygame.Rect(18, 18, 320, 168)
         self._panel(surface, rect)
         self._text(surface, "KARL I GRIMSTAD", self.heading_font, (rect.x + 18, rect.y + 12), (245, 247, 250))
         self._text(surface, f"{state.money} kr", self.money_font, (rect.x + 18, rect.y + 45), (255, 214, 84))
@@ -370,6 +422,13 @@ class GameUI:
             f"Utdanning: {state.education_label}   Dag: {state.day}",
             self.body_font,
             (rect.x + 18, rect.y + 107),
+            (225, 232, 238),
+        )
+        self._text(
+            surface,
+            f"Bolig: {state.home_label}",
+            self.body_font,
+            (rect.x + 18, rect.y + 134),
             (225, 232, 238),
         )
 

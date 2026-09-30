@@ -5,12 +5,12 @@ from dataclasses import dataclass
 import pygame
 
 from .content import (
-    APARTMENT_PRICE,
-    APARTMENT_RENT,
+    BAR_FOOD_PRICE,
     DAY_SECONDS,
     EDUCATION_POINTS_PER_LEVEL,
     FOOD_PRICE,
     GOAL_SAVINGS,
+    HOUSING,
     HOSTEL_PRICE,
     JOBS,
     MAX_EDUCATION_POINTS,
@@ -37,6 +37,7 @@ class GameState:
         self.current_outfit = "shorts"
         self.completed_jobs: set[str] = set()
         self.apartment = False
+        self.home_id: str | None = None
         self.day = 1
         self.day_time = 0.0
         self.last_soup_day = 0
@@ -52,6 +53,14 @@ class GameState:
     @property
     def education_label(self) -> str:
         return education_name(self.education_level)
+
+    @property
+    def home_label(self) -> str:
+        return HOUSING[self.home_id].name if self.home_id else "Hospits"
+
+    @property
+    def daily_housing_cost(self) -> int:
+        return HOUSING[self.home_id].rent if self.home_id else NO_APARTMENT_COST
 
     def work_blocker(self, job_id: str) -> str | None:
         job = JOBS[job_id]
@@ -133,6 +142,14 @@ class GameState:
         self.hunger = min(100.0, self.hunger + 40)
         return True, f"Karl spiste mat for {FOOD_PRICE} kr."
 
+    def buy_bar_food(self) -> tuple[bool, str]:
+        if self.money < BAR_FOOD_PRICE:
+            return False, f"Måltidet koster {BAR_FOOD_PRICE} kr."
+        self.money -= BAR_FOOD_PRICE
+        self.hunger = min(100.0, self.hunger + 30)
+        self.energy = min(100.0, self.energy + 10)
+        return True, f"Karl spiste et billig måltid på baren for {BAR_FOOD_PRICE} kr."
+
     def take_soup(self) -> tuple[bool, str]:
         if self.last_soup_day == self.day:
             return False, "Suppen er allerede hentet i dag."
@@ -140,25 +157,38 @@ class GameState:
         self.hunger = min(100.0, self.hunger + 25)
         return True, "Karl fikk varm suppe fra menigheten."
 
-    def buy_apartment(self) -> tuple[bool, str]:
-        if self.apartment:
-            return True, "Karl bor allerede i egen bolig."
-        if self.money < APARTMENT_PRICE:
-            return False, f"Leiligheten koster {APARTMENT_PRICE} kr."
-        self.money -= APARTMENT_PRICE
+    def buy_home(self, home_id: str) -> tuple[bool, str]:
+        home = HOUSING[home_id]
+        if self.home_id == home_id:
+            return True, f"Karl bor allerede i {home.name.lower()}."
+        current_price = HOUSING[self.home_id].price if self.home_id else 0
+        if home.price <= current_price:
+            return False, "Karl kan ikke bytte til en billigere bolig etter å ha kjøpt en dyrere."
+        cost = home.price - current_price
+        if self.money < cost:
+            return False, f"Karl trenger {cost - self.money} kr mer til {home.name.lower()}."
+        self.money -= cost
+        self.home_id = home_id
         self.apartment = True
-        return True, "Karl kjøpte sin første bolig i Grimstad."
+        if current_price:
+            return True, f"Karl oppgraderte til {home.name.lower()}."
+        return True, f"Karl kjøpte {home.name.lower()} i Grimstad."
+
+    def buy_apartment(self) -> tuple[bool, str]:
+        """Backward-compatible shortcut for the original housing system."""
+        return self.buy_home("freeway_house")
 
     def sleep(self) -> tuple[bool, str]:
-        if not self.apartment:
+        if not self.home_id:
             if self.money < HOSTEL_PRICE:
                 return False, f"Billig overnatting koster {HOSTEL_PRICE} kr."
             self.money -= HOSTEL_PRICE
             self.energy = min(100.0, 86)
             return True, f"Karl sov på hospits for {HOSTEL_PRICE} kr."
-        self.energy = 100.0
+        home = HOUSING[self.home_id]
+        self.energy = float(home.recovery)
         self.hunger = max(0.0, self.hunger - 8)
-        return True, "Karl sov godt i sin egen leaky."
+        return True, f"Karl sov godt i {home.name.lower()}."
 
     def advance_time(self, dt: float, moving: bool) -> str | None:
         hunger_drain = 0.32
@@ -176,12 +206,12 @@ class GameState:
 
     def _start_new_day(self) -> str:
         self.day += 1
-        cost = APARTMENT_RENT if self.apartment else NO_APARTMENT_COST
+        cost = self.daily_housing_cost
         paid = min(self.money, cost)
         self.money -= paid
         self.hunger = max(0.0, self.hunger - 12)
-        recovery = 28 if self.apartment else 14
-        self.energy = min(100.0, self.energy + recovery)
+        recovery = HOUSING[self.home_id].recovery if self.home_id else 14
+        self.energy = min(100.0, self.energy + recovery * 0.35)
         if paid < cost:
             return f"Dag {self.day}: Karl klarte ikke boligkostnaden på {cost} kr."
         return f"Dag {self.day}: boligkostnad {cost} kr. Energi og mat må fylles."

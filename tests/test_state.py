@@ -1,6 +1,6 @@
 import unittest
 
-from game.content import APARTMENT_PRICE, GOAL_SAVINGS
+from game.content import GOAL_SAVINGS, HOUSING
 from game.state import GameState
 
 
@@ -51,15 +51,28 @@ class GameStateTests(unittest.TestCase):
         self.assertEqual(self.state.money, 620)
         self.assertIn("harbor_assistant", self.state.completed_jobs)
 
-    def test_apartment_and_sleep(self) -> None:
-        self.state.money = APARTMENT_PRICE + 100
-        changed, _ = self.state.buy_apartment()
+    def test_cheap_house_and_sleep(self) -> None:
+        self.state.money = HOUSING["freeway_house"].price + 100
+        changed, _ = self.state.buy_home("freeway_house")
         self.assertTrue(changed)
         self.assertTrue(self.state.apartment)
+        self.assertEqual(self.state.home_id, "freeway_house")
         self.state.energy = 10
         rested, _ = self.state.sleep()
         self.assertTrue(rested)
-        self.assertEqual(self.state.energy, 100)
+        self.assertEqual(self.state.energy, HOUSING["freeway_house"].recovery)
+
+    def test_sea_house_is_more_expensive_and_upgrades(self) -> None:
+        self.state.money = HOUSING["sea_house"].price + 100
+        changed, _ = self.state.buy_home("sea_house")
+        self.assertTrue(changed)
+        self.assertEqual(self.state.home_id, "sea_house")
+        self.assertEqual(self.state.money, 100)
+        self.state.energy = 0
+        rested, _ = self.state.sleep()
+        self.assertTrue(rested)
+        self.assertEqual(self.state.energy, HOUSING["sea_house"].recovery)
+        self.assertEqual(self.state.daily_housing_cost, HOUSING["sea_house"].rent)
 
     def test_goal_requires_consultant_shift(self) -> None:
         self.state.education_progress = 9
