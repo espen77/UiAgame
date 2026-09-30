@@ -25,6 +25,7 @@ class GameStateTests(unittest.TestCase):
         self.assertEqual(self.state.current_outfit, "casual")
         self.assertEqual(self.state.money, 200)
         self.assertIsNone(self.state.work_blocker("store_assistant"))
+        self.assertIsNone(self.state.work_blocker("clothing_sales"))
 
     def test_school_grades_follow_norwegian_levels(self) -> None:
         for expected_grade in range(2, 8):
@@ -117,6 +118,21 @@ class GameStateTests(unittest.TestCase):
         self.assertTrue(changed)
         self.assertEqual(self.state.hunger, 50)
         self.assertEqual(self.state.energy, 30)
+
+    def test_church_rest_restores_ten_percent_once_per_day(self) -> None:
+        self.state.energy = 20
+        changed, _ = self.state.sleep_church()
+        self.assertTrue(changed)
+        self.assertAlmostEqual(self.state.energy, 28.0)
+        changed_again, message = self.state.sleep_church()
+        self.assertFalse(changed_again)
+        self.assertIn("allerede", message)
+
+    def test_xp_progress_and_career_level(self) -> None:
+        self.state.add_xp(120)
+        self.assertEqual(self.state.xp, 120)
+        self.assertEqual(self.state.career_level, 2)
+        self.assertAlmostEqual(self.state.xp_progress, 0.2)
 
     def test_goal_requires_exclusive_house_and_consultant_shift(self) -> None:
         self.state.education_grade = 21

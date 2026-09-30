@@ -15,6 +15,7 @@ from .content import (
     NO_APARTMENT_COST,
     OUTFITS,
     PHARMACY_FOOD_PRICE,
+    XP_PER_LEVEL,
     SCHOOL_MAX_GRADE,
     SCHOOL_STUDY_COST,
     SHOP_OUTFITS,
@@ -37,6 +38,7 @@ class GameState:
         self.hunger = 100.0
         self.energy = 100.0
         self.education_grade = 1
+        self.xp = 0
         self.owned_outfits = {"shorts"}
         self.current_outfit = "shorts"
         self.completed_jobs: set[str] = set()
@@ -45,6 +47,7 @@ class GameState:
         self.day = 1
         self.day_time = 0.0
         self.last_soup_day = 0
+        self.last_church_rest_day = 0
         self.won = False
         self.shift: ShiftState | None = None
         self.position = pygame.Vector2(655, 575)
@@ -54,6 +57,18 @@ class GameState:
     @property
     def education_label(self) -> str:
         return education_name(self.education_grade)
+
+    @property
+    def career_level(self) -> int:
+        return 1 + self.xp // XP_PER_LEVEL
+
+    @property
+    def xp_progress(self) -> float:
+        return (self.xp % XP_PER_LEVEL) / XP_PER_LEVEL
+
+    def add_xp(self, amount: int) -> int:
+        self.xp += max(0, amount)
+        return self.xp // XP_PER_LEVEL
 
     @property
     def home_label(self) -> str:
@@ -98,8 +113,9 @@ class GameState:
         self.hunger = max(0.0, self.hunger - 10)
         self.energy = max(0.0, self.energy - 18)
         self.completed_jobs.add(job.id)
+        self.add_xp(max(10, job.wage // 10))
         self.shift = None
-        return f"Skiftet er ferdig. Karl tjente {job.wage} kr."
+        return f"Skiftet er ferdig. Karl tjente {job.wage} kr og fikk XP."
 
     def required_outfit(self, outfit_id: str) -> str | None:
         tier = OUTFITS[outfit_id].tier
@@ -145,8 +161,9 @@ class GameState:
             self.owned_outfits.add("school")
         self.current_outfit = "school"
         self.energy = max(0.0, self.energy - 6)
+        self.add_xp(25)
         return True, (
-            f"En studieuke fullført. Grade {self.education_grade}: {self.education_label}."
+            f"En studieuke fullført. Grade {self.education_grade}: {self.education_label}. Du fikk 25 XP."
         )
 
     def buy_food(self) -> tuple[bool, str]:
@@ -170,6 +187,13 @@ class GameState:
         self.last_soup_day = self.day
         self.hunger = min(100.0, self.hunger + 25)
         return True, "Karl fikk varm suppe fra menigheten."
+
+    def sleep_church(self) -> tuple[bool, str]:
+        if self.last_church_rest_day == self.day:
+            return False, "Karl har allerede hvilt i kirken i dag."
+        self.last_church_rest_day = self.day
+        self.energy = min(100.0, self.energy + (100.0 - self.energy) * 0.10)
+        return True, "Karl hvilt i kirken og fikk 10 % energi."
 
     def buy_home(self, home_id: str) -> tuple[bool, str]:
         home = HOUSING[home_id]
@@ -234,7 +258,7 @@ class GameState:
     def update_goal(self) -> bool:
         requirements = {
             "Doktorgrad": self.education_grade >= 21,
-            "Exclusive House": self.home_id == "exclusive_house",
+            "Dyrt Hus": self.home_id == "exclusive_house",
             "Konsulentjobb fullført": "consultant" in self.completed_jobs,
             f"{GOAL_SAVINGS} kr spare": self.money >= GOAL_SAVINGS,
         }
@@ -247,7 +271,7 @@ class GameState:
     def goal_requirements(self) -> list[tuple[str, bool]]:
         return [
             ("Fullfør Doktorgrad", self.education_grade >= 21),
-            ("Eier Exclusive House", self.home_id == "exclusive_house"),
+            ("Eier Dyrt Hus", self.home_id == "exclusive_house"),
             ("Fullfør ett skift som konsulent", "consultant" in self.completed_jobs),
             (f"Ha minst {GOAL_SAVINGS} kr", self.money >= GOAL_SAVINGS),
         ]

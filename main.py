@@ -172,6 +172,11 @@ class Game:
         elif action.id == "buy_apartment":
             _, message = self.state.buy_apartment()
             self.toast(message)
+        elif action.id == "sleep_church":
+            success, message = self.state.sleep_church()
+            if success:
+                self.sounds.play("sleep")
+            self.toast(message)
         elif action.id in {"sleep_hostel", "sleep_home"}:
             success, message = self.state.sleep()
             if success:

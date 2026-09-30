@@ -17,6 +17,7 @@ from .content import (
     SCHOOL_MAX_GRADE,
     SCHOOL_STUDY_COST,
     SHOP_OUTFITS,
+    XP_PER_LEVEL,
     UNIVERSITY_MIN_GRADE,
     UNIVERSITY_STUDY_COST,
     housing_at,
@@ -154,6 +155,15 @@ class GameUI:
                     hint="Menigheten hjelper Karl én gang per dag." if soup_available else "Suppen er allerede hentet i dag.",
                 )
             )
+            church_rest_available = state.last_church_rest_day != state.day
+            actions.append(
+                ModalAction(
+                    id="sleep_church",
+                    label="Hvil i kirken (gratis, +10 % energi)",
+                    enabled=church_rest_available,
+                    hint="En kort hvile i kirken gir 10 % energi én gang per dag." if church_rest_available else "Du har allerede hvilt i kirken i dag.",
+                )
+            )
 
         home = housing_at(location_id)
         if home:
@@ -265,7 +275,7 @@ class GameUI:
         return Modal(
             context="housing",
             title="Bolig i Grimstad",
-            subtitle="Billig Hus, Middels Hus eller Exclusive House sør for kirken.",
+            subtitle="Billig Hus, Middels Hus eller Dyrt Hus sør for kirken.",
             lines=[
                 f"Penger: {state.money} kr",
                 f"Nåværende bolig: {state.home_label}",
@@ -283,7 +293,7 @@ class GameUI:
                 "Klikk på et kartsted for at Karl skal gå dit og gå inn",
                 "1-9 eller Enter: velg handling i en meny",
                 "Esc: lukk meny",
-                "Mål: Doktorgrad, Exclusive House, konsulentjobb og minst 8000 kr.",
+                "Mål: Doktorgrad, Dyrt Hus, konsulentjobb og minst 8000 kr.",
                 "Utdanning: Barneskole 1-7, Ungdomskole 8-10, Vidregående 11-13, Fagskole 14-15, Bachelor 16-18, Master 19-20, Doktorgrad 21-25.",
             ],
             actions=[ModalAction(id="close", label="Spill (Esc)", hint="Lukk hjelpevinduet.")],
@@ -295,7 +305,7 @@ class GameUI:
             title="Karl vant karrieren!",
             subtitle="Fra shortser på kaia til universitetskonsulent.",
             lines=[
-                f"Full utdanning, Exclusive House, konsulentjobb og {GOAL_SAVINGS} kr spare.",
+                f"Doktorgrad, Dyrt Hus, konsulentjobb og {GOAL_SAVINGS} kr spare.",
                 "Du kan fortsette spille og bygge opp sparepengene.",
             ],
             actions=[ModalAction(id="close", label="Feir! (Esc)", hint="Karl er både rik og kjent i Grimstad.")],
@@ -349,9 +359,33 @@ class GameUI:
         pygame.draw.rect(surface, (16, 22, 30), panel)
         pygame.draw.line(surface, (70, 84, 96), panel.topleft, panel.bottomleft, 3)
         inner = panel.inflate(-32, -24)
-        portrait_width = min(150, inner.width - 20)
-        portrait_rect = pygame.Rect(0, 0, portrait_width, 180)
-        portrait_rect.midtop = (panel.centerx, panel.y + 14)
+
+        self._text(
+            surface,
+            "KARL I GRIMSTAD",
+            self.heading_font,
+            (panel.centerx, panel.y + 12),
+            (255, 214, 84),
+            center=True,
+        )
+
+        goal_box = pygame.Rect(inner.x, panel.y + 48, inner.width, 70)
+        pygame.draw.rect(surface, (24, 32, 42), goal_box, border_radius=10)
+        self._text(surface, "NESTE MÅL", self.small_font, (goal_box.x + 12, goal_box.y + 8), (255, 214, 84))
+        self._draw_wrapped(
+            surface,
+            self._next_goal_text(state),
+            self.small_font,
+            goal_box.x + 12,
+            goal_box.y + 28,
+            goal_box.width - 24,
+            (225, 232, 238),
+            17,
+        )
+
+        portrait_width = min(126, inner.width - 40)
+        portrait_rect = pygame.Rect(0, 0, portrait_width, 150)
+        portrait_rect.midtop = (panel.centerx, goal_box.bottom + 12)
         pygame.draw.rect(surface, (24, 32, 42), portrait_rect.inflate(10, 10), border_radius=12)
         portrait = self.characters.get(state.current_outfit)
         if portrait:
@@ -365,9 +399,14 @@ class GameUI:
             center=True,
         )
 
-        y = portrait_rect.bottom + 32
+        y = portrait_rect.bottom + 30
+        bar_width = inner.width - 68
+        self._bar(surface, pygame.Rect(inner.x + 68, y, bar_width, 15), state.hunger, (236, 96, 84), "Mat")
+        self._bar(surface, pygame.Rect(inner.x + 68, y + 36, bar_width, 15), state.energy, (72, 176, 230), "Energi")
+        y += 66
+
         self._text(surface, f"{state.money} kr", self.money_font, (inner.x, y), (255, 214, 84))
-        y += 32
+        y += 28
         job = self._current_job(state)
         y = self._draw_wrapped(
             surface,
@@ -377,6 +416,7 @@ class GameUI:
             y,
             inner.width,
             (225, 232, 238),
+            21,
         )
         y = self._draw_wrapped(
             surface,
@@ -386,8 +426,9 @@ class GameUI:
             y,
             inner.width,
             (196, 208, 218),
+            18,
         )
-        y = self._draw_wrapped(
+        self._draw_wrapped(
             surface,
             f"Bolig: {state.home_label}  •  Leie: {state.daily_housing_cost} kr",
             self.small_font,
@@ -395,26 +436,23 @@ class GameUI:
             y,
             inner.width,
             (196, 208, 218),
-        )
-
-        y += 14
-        bar_width = inner.width - 68
-        self._bar(surface, pygame.Rect(inner.x + 68, y + 8, bar_width, 15), state.hunger, (236, 96, 84), "Mat")
-        self._bar(surface, pygame.Rect(inner.x + 68, y + 46, bar_width, 15), state.energy, (72, 176, 230), "Energi")
-        y += 82
-
-        pygame.draw.rect(surface, (24, 32, 42), (inner.x, y, inner.width, 92), border_radius=10)
-        self._text(surface, "NESTE MÅL", self.small_font, (inner.x + 12, y + 9), (255, 214, 84))
-        self._draw_wrapped(
-            surface,
-            self._next_goal_text(state),
-            self.small_font,
-            inner.x + 12,
-            y + 30,
-            inner.width - 24,
-            (225, 232, 238),
             18,
         )
+
+        xp_y = panel.bottom - 108
+        self._text(
+            surface,
+            f"XP: {state.xp % XP_PER_LEVEL}/{XP_PER_LEVEL}  •  Karrierenivå {state.career_level}",
+            self.small_font,
+            (inner.x, xp_y),
+            (214, 226, 234),
+        )
+        xp_bar = pygame.Rect(inner.x, xp_y + 22, inner.width, 12)
+        pygame.draw.rect(surface, (56, 66, 76), xp_bar, border_radius=6)
+        xp_fill = xp_bar.inflate(-4, -4)
+        xp_fill.width = max(0, int(xp_fill.width * state.xp_progress))
+        if xp_fill.width > 0:
+            pygame.draw.rect(surface, (168, 116, 224), xp_fill, border_radius=4)
 
         self._draw_wrapped(
             surface,
@@ -445,7 +483,7 @@ class GameUI:
         if state.education_grade < MAX_EDUCATION_GRADE:
             return f"Studer mer: grade {state.education_grade} ({state.education_label})."
         if state.home_id != "exclusive_house":
-            return "Kjøp Exclusive House sør for kirken."
+            return "Kjøp Dyrt Hus sør for kirken."
         if "consultant" not in state.completed_jobs:
             return "Jobb ett skift som universitetskonsulent."
         return f"Spar videre til minst {GOAL_SAVINGS} kr."

@@ -126,7 +126,17 @@ JOBS: dict[str, Job] = {
         education=1,
         wage=170,
         duration=4.0,
-        description="Betjener kunder og jobber i butikken ved Auto45.",
+        description="Betjener kunder og jobber i butikken ved CircleK.",
+    ),
+    "clothing_sales": Job(
+        id="clothing_sales",
+        name="Klesbutikkansatt",
+        outfit="casual",
+        location="clothing_shop",
+        education=1,
+        wage=210,
+        duration=4.5,
+        description="Hjelper kunder med klær og får salgserfaring i butikken.",
     ),
     "warehouse": Job(
         id="warehouse",
@@ -146,7 +156,7 @@ JOBS: dict[str, Job] = {
         education=14,
         wage=430,
         duration=6.0,
-        description="Reparerer biler og får fast tilknytning til Auto45.",
+        description="Reparerer biler og får fast tilknytning til CircleK.",
     ),
     "it_support": Job(
         id="it_support",
@@ -214,8 +224,8 @@ LOCATIONS: dict[str, Location] = {
     ),
     "gas_station": Location(
         id="gas_station",
-        name="Auto45 ved motorveyen",
-        short_name="Auto45",
+        name="CircleK ved motorveien",
+        short_name="CircleK",
         x=0.64,
         y=0.32,
         color=(214, 96, 64),
@@ -250,8 +260,8 @@ LOCATIONS: dict[str, Location] = {
     ),
     "exclusive_house": Location(
         id="exclusive_house",
-        name="Exclusive House",
-        short_name="Exclusive House",
+        name="Dyrt Hus",
+        short_name="Dyrt Hus",
         x=0.78,
         y=0.79,
         color=(52, 178, 196),
@@ -328,7 +338,7 @@ HOUSING: dict[str, Housing] = {
     ),
     "exclusive_house": Housing(
         id="exclusive_house",
-        name="Exclusive House",
+        name="Dyrt Hus",
         price=12000,
         rent=260,
         efficiency=1.0,
@@ -358,6 +368,7 @@ FOOD_PRICE = 95
 HOSTEL_PRICE = 80
 NO_APARTMENT_COST = 35
 GOAL_SAVINGS = 8000
+XP_PER_LEVEL = 100
 
 
 def jobs_at(location_id: str) -> tuple[Job, ...]:
