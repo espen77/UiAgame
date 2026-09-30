@@ -17,6 +17,7 @@ SOUND_FILES = {
     "work": "work.wav",
     "door_open": "door_open.wav",
     "eat_drink": "eat_drink.wav",
+    "study": "study.wav",
 }
 
 

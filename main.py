@@ -156,10 +156,14 @@ class Game:
                 self.sounds.play("eat_drink")
             self.toast(message)
         elif action.id == "study_school":
-            _, message = self.state.study(university=False)
+            success, message = self.state.study(university=False)
+            if success:
+                self.sounds.play("study")
             self.toast(message)
         elif action.id == "study_university":
-            _, message = self.state.study(university=True)
+            success, message = self.state.study(university=True)
+            if success:
+                self.sounds.play("study")
             self.toast(message)
         elif action.id == "soup":
             success, message = self.state.take_soup()

@@ -186,6 +186,14 @@ class GameUI:
                     ),
                 )
             )
+            if is_current:
+                actions.append(
+                    ModalAction(
+                        id="sleep_home",
+                        label="Hvil i egen bolig (gratis)",
+                        hint=f"Du eier {home.name}. Hvileeffekt: {int(home.efficiency * 100)} %.",
+                    )
+                )
 
         actions.append(ModalAction(id="close", label="Lukk (Esc)"))
         return Modal(

@@ -76,7 +76,7 @@ Working and studying award XP. The HUD shows XP toward the next career level at 
 
 ## Sounds
 
-The `sounds/` directory contains effects for walking, sleeping, working, opening doors, and eating or drinking. The bundled WAV files are synthesized placeholders and can be replaced without changing code.
+The `sounds/` directory contains effects for walking, sleeping, working, studying, opening doors, and eating or drinking. The bundled WAV files are synthesized placeholders and can be replaced without changing code.
 
 ## Development
 
